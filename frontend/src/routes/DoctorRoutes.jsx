@@ -5,6 +5,7 @@ import DoctorDashboard from "../pages/doctor/DoctorDashboard";
 import DoctorProfile from "../pages/doctor/DoctorProfile";
 import DoctorEditProfile from "../pages/doctor/DoctorEditProfile";
 import DoctorAppointments from "../pages/doctor/DoctorAppointments";
+import Chat from "../pages/Chat";
 
 /**
  * DoctorRoutes Component
@@ -42,6 +43,14 @@ const DoctorRoutes = () => {
         element={
           <ProtectedRoute requiredRole="doctor">
             <DoctorAppointments />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/chat/:appointmentId"
+        element={
+          <ProtectedRoute requiredRole="doctor">
+            <Chat />
           </ProtectedRoute>
         }
       />

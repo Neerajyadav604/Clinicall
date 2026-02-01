@@ -3,14 +3,16 @@ const Payment = require("../models/Payment");
 const Appointment = require("../models/Appointment")
 const doctorProfile = require("../models/DoctorProfile")
 const crypto = require("crypto");
-
+require("dotenv").config()
 exports.createOrder = async (req, res) => {
   try {
     const { appointmentId } = req.body;
+    console.log("💰 createOrder called with appointmentId:", appointmentId);
 
-    
     const appointment = await Appointment.findById(appointmentId)
       .populate("doctorId");
+
+    console.log("📋 Appointment found:", appointment ? "Yes" : "No");
 
     if (!appointment) {
       return res.status(404).json({
@@ -19,7 +21,6 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    
     if (appointment.userId.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -27,19 +28,17 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-   const doctorId = appointment.doctorId._id
+    const doctorId = appointment.doctorId._id;
 
-   console.log(doctorId._id)
+    // Try to get doctor profile with consultation fee
+    let doctorprofile = await doctorProfile.findOne({ doctorId: doctorId });
 
-const doctorprofile = await doctorProfile.findOne({doctorId:doctorId})
+    // Default consultation fee if profile doesn't exist
+    let amount = 500; // Default fee in INR
 
-console.log(doctorprofile)
-
-
-
-
-   
-    const amount = doctorprofile.consultationFee;
+    if (doctorprofile && doctorprofile.consultationFee) {
+      amount = doctorprofile.consultationFee;
+    }
 
     if (!amount || amount <= 0) {
       return res.status(400).json({
@@ -48,33 +47,39 @@ console.log(doctorprofile)
       });
     }
 
-   
     const options = {
-      amount: amount * 100, 
+      amount: amount * 100,
       currency: "INR",
       receipt: `receipt_${appointmentId}`
     };
 
-    const order = await instance.orders.create(options);
+    console.log("🔧 Razorpay options:", options);
+    console.log("💳 Razorpay instance:", instance ? "Initialized" : "NOT initialized");
 
-  
-    await Payment.create({
+    const order = await instance.orders.create(options);
+    
+    console.log("✅ Order created:", order.id);
+
+   const paymentcreated =  await Payment.create({
       user: req.user.id,
       appointment: appointmentId,
       razorpayOrderId: order.id,
       amount,
       status: "created"
     });
-
+ console.log("Payment Created", paymentcreated)
     res.status(200).json({
       success: true,
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      key: process.env.RAZORPAY_KEY_ID,
-      order:order
+      key: process.env.RAZORPAY_KEY,
+      order:order,
+      
     });
   } catch (error) {
+    console.error("❌ Payment error:", error.message);
+    console.error("🔍 Full error:", error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -95,7 +100,7 @@ exports.verifyPayment = async (req, res) => {
     const body = razorpay_order_id + "|" + razorpay_payment_id;
 
     const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .createHmac("sha256", process.env.RAZORPAY_SECRET)
       .update(body)
       .digest("hex");
 
@@ -129,13 +134,16 @@ exports.verifyPayment = async (req, res) => {
       payment.appointment,
       {
         paymentStatus: "paid",
-       
+        consultationMode: "online",
+        isChatEnabled: true
       }
     );
 
     res.status(200).json({
       success: true,
-      message: "Payment verified & appointment confirmed"
+      message: "Payment verified & appointment confirmed",
+      appointmentId: payment.appointment,
+      consultationMode: "online"
     });
 
   } catch (error) {

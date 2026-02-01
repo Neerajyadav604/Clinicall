@@ -5,6 +5,7 @@ import Testimonials from "../components/RatingandReview"
 import WhyChooseUs from '../components/WhyChooseUs';
 import HowItWorks from '../components/HowItWroks';
 import DoctorCTA from '../components/DoctorCTA';
+import Footer from '../components/Footer';
 
 
 
@@ -100,7 +101,7 @@ const Home = () => {
         <WhyChooseUs/>
         <HowItWorks/>
        <DoctorCTA/>
-      
+       <Footer/>
 
     </div>
   )

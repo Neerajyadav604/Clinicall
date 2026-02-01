@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { searchDoctors, requestAppointment } from "../services/operations/SearchApi";
+import Footer from "../components/Footer";
 
 const mapStatus = (s) => {
   if (!s) return "Book Appointment";

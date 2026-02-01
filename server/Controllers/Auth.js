@@ -102,7 +102,7 @@ console.log("reqbody from login controller",req.body)
       return res.status(401).json({ success: false, message: "Invalid email or password" });
 
     // 3️⃣ Populate based on role
-    if (user.role === "USER"||"ADMIN") {
+    if (user.role === "USER" || user.role === "ADMIN") {
       await user.populate("additionalDetails");
     } else if (user.role === "DOCTOR") {
       await user.populate({

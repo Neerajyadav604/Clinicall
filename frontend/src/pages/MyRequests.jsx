@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getUserRequests, getRequestsByStatus } from "../services/operations/requestApi";
+import { setConsultationMode, checkChatAccess, initiatePayment, verifyPayment } from "../services/operations/consultationApi";
 import { toast } from "react-toastify";
 
 /**
@@ -7,9 +9,12 @@ import { toast } from "react-toastify";
  * Displays all user appointment requests with filtering by status
  */
 const MyRequests = () => {
+  const navigate = useNavigate();
   const [requests, setRequests] = useState([]);
   const [filteredRequests, setFilteredRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [processingPayment, setProcessingPayment] = useState({});
+  const [processingConsultation, setProcessingConsultation] = useState({});
   const [stats, setStats] = useState({
     total: 0,
     approved: 0,
@@ -110,6 +115,127 @@ const MyRequests = () => {
   const formatTime = (timeString) => {
     if (!timeString) return "Not specified";
     return timeString;
+  };
+
+  // Handle offline consultation
+  const handleOfflineConsultation = async (appointmentId) => {
+    try {
+      setProcessingConsultation({ ...processingConsultation, [appointmentId]: true });
+      const response = await setConsultationMode(appointmentId, "offline");
+      
+      if (response.success) {
+        toast.success("Offline consultation selected. Visit the clinic on your appointment date.");
+        
+        // Update requests list
+        const updatedRequests = requests.map((req) =>
+          req._id === appointmentId
+            ? { ...req, consultationMode: "offline", paymentStatus: "unpaid" }
+            : req
+        );
+        setRequests(updatedRequests);
+        setFilteredRequests(updatedRequests.filter((r) => 
+          selectedStatus === "ALL" || r.approvalstatus === selectedStatus
+        ));
+      }
+    } catch (error) {
+      toast.error(error.message || "Failed to set offline consultation");
+    } finally {
+      setProcessingConsultation({ ...processingConsultation, [appointmentId]: false });
+    }
+  };
+
+  // Handle online consultation with payment
+  const handleOnlineConsultation = async (appointmentId) => {
+    try {
+      setProcessingPayment({ ...processingPayment, [appointmentId]: true });
+      
+      // Initiate payment
+      const paymentResponse = await initiatePayment(appointmentId);
+      
+      console.log(paymentResponse)
+
+      if (paymentResponse.success && paymentResponse.key && paymentResponse.orderId) {
+       
+
+        // Open Razorpay payment modal
+        const options = {
+          key: paymentResponse.key,
+          amount: paymentResponse.amount,
+          currency: paymentResponse.currency,
+          order_id: paymentResponse.orderId,
+          handler: async (response) => {
+           
+
+            try {
+              // Verify payment
+              const verifyResponse = await verifyPayment({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              });
+
+             
+
+
+              if (verifyResponse.success) {
+                toast.success("Payment successful! Chat enabled.");
+                
+                // Update requests list
+                const updatedRequests = requests.map((req) =>
+                  req._id === appointmentId
+                    ? { ...req, consultationMode: "online", paymentStatus: "paid", isChatEnabled: true }
+                    : req
+                );
+                setRequests(updatedRequests);
+                setFilteredRequests(updatedRequests.filter((r) => 
+                  selectedStatus === "ALL" || r.approvalstatus === selectedStatus
+                ));
+                
+                // Navigate to chat
+                setTimeout(() => navigate(`/chat/${appointmentId}`), 1000);
+              }
+            } catch (error) {
+              toast.error(error.message || "Payment verification failed");
+            }
+          },
+          prefill: {
+            name: localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")).fullName : "",
+            email: localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")).email : "",
+          },
+          theme: {
+            color: "#2563eb",
+          },
+        };
+
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
+      } else {
+      
+        
+        toast.error("Failed to initiate payment");
+      }
+    } catch (error) {
+      
+
+      toast.error(error.message || "Failed to initiate payment");
+    } finally {
+      setProcessingPayment({ ...processingPayment, [appointmentId]: false });
+    }
+  };
+
+  // Handle start chat button
+  const handleStartChat = async (appointmentId) => {
+    try {
+      const chatResponse = await checkChatAccess(appointmentId);
+      
+      if (chatResponse.canAccess) {
+        navigate(`/chat/${appointmentId}`);
+      } else {
+        toast.error(chatResponse.reason || "Chat access not available");
+      }
+    } catch (error) {
+      toast.error(error.message || "Failed to access chat");
+    }
   };
 
   if (loading) {
@@ -294,10 +420,63 @@ const MyRequests = () => {
                     </div>
                   )}
 
-                  {request.approvalstatus === "APPROVED" && (
+                  {request.approvalstatus === "APPROVED" && !request.consultationMode && (
+                    <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <p className="text-sm text-blue-900 font-medium mb-3">
+                        Doctor approved! Choose your consultation method:
+                      </p>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                          onClick={() => handleOfflineConsultation(request._id)}
+                          disabled={processingConsultation[request._id]}
+                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors font-medium"
+                        >
+                          {processingConsultation[request._id] ? "Processing..." : "Visit Clinic"}
+                        </button>
+                        <button
+                          onClick={() => handleOnlineConsultation(request._id)}
+                          disabled={processingPayment[request._id]}
+                          className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors font-medium"
+                        >
+                          {processingPayment[request._id] ? "Processing..." : "Pay & Start Chat"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {request.approvalstatus === "APPROVED" && request.consultationMode === "offline" && (
+                    <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <p className="text-sm text-blue-900 font-medium">
+                        ✓ Offline consultation selected. Visit the clinic on your appointment date.
+                      </p>
+                    </div>
+                  )}
+
+                  {request.approvalstatus === "APPROVED" && request.consultationMode === "online" && request.paymentStatus !== "paid" && (
+                    <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <p className="text-sm text-yellow-900 font-medium mb-3">
+                        Payment required to start online consultation
+                      </p>
+                      <button
+                        onClick={() => handleOnlineConsultation(request._id)}
+                        disabled={processingPayment[request._id]}
+                        className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors font-medium"
+                      >
+                        {processingPayment[request._id] ? "Processing..." : "Proceed to Payment"}
+                      </button>
+                    </div>
+                  )}
+
+                  {request.approvalstatus === "APPROVED" && 
+                   request.consultationMode === "online" && 
+                   request.paymentStatus === "paid" && 
+                   request.isChatEnabled && (
                     <div className="mt-4 flex gap-3">
-                      <button className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
-                        Start Consultation
+                      <button
+                        onClick={() => handleStartChat(request._id)}
+                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                      >
+                        💬 Start Chat with Doctor
                       </button>
                     </div>
                   )}

@@ -26,7 +26,8 @@
     "ollama": "^0.6.3",
     "otp-generator": "^4.0.1",
     "razorpay": "^2.9.6",
-    "react-router-dom": "^7.11.0"
+    "react-router-dom": "^7.11.0",
+    "socket.io": "^4.8.3"
   },
   "description": ""
 }

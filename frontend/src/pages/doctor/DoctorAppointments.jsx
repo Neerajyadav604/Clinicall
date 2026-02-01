@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DoctorLayout from "../../components/DoctorLayout";
 import {
   getDoctorAppointments,
@@ -12,6 +13,7 @@ import { toast } from "react-toastify";
  * Displays and manages doctor's appointments with approve/reject functionality
  */
 const DoctorAppointments = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [appointments, setAppointments] = useState([]);
   const [filter, setFilter] = useState("all");
@@ -366,6 +368,26 @@ const DoctorAppointments = () => {
                           </>
                         )}
                       </button>
+                    </div>
+                  ) : appointment.approvalstatus?.toUpperCase() === "APPROVED" ? (
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => navigate(`/doctor/chat/${appointment._id}`)}
+                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="currentColor">
+                          <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
+                          <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
+                        </svg>
+                        Start Chat
+                      </button>
+                      <div className="flex-1 text-center py-2">
+                        <p className="text-sm text-gray-600">
+                          Status: <span className="font-semibold text-green-600">
+                            {appointment.approvalstatus}
+                          </span>
+                        </p>
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center py-2">

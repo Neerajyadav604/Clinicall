@@ -42,6 +42,15 @@ const AppointmentSchema = new mongoose.Schema(
     },
     cancellationReason:{
       type:String
+    },
+    consultationMode:{
+      type:String,
+      enum:["online","offline"],
+      default:null
+    },
+    isChatEnabled:{
+      type:Boolean,
+      default:false
     }
   },
   {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Phone, Clock, MapPin, Send, CheckCircle } from 'lucide-react';
+import Footer from '../components/Footer';
 
 const ContactUs = () => {
   const [formData, setFormData] = useState({
@@ -276,6 +277,7 @@ const ContactUs = () => {
         </div>
 
       </div>
+      <Footer />
     </section>
   );
 };

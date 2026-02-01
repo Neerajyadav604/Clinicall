@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Stethoscope, AlertCircle, Video } from 'lucide-react';
 import doctorBg from '../assets/doctor-bg.jpg';
+import Footer from '../components/Footer';
 
 const AboutUs = () => {
   const services = [
@@ -77,7 +78,7 @@ const AboutUs = () => {
           </div>
         </div>
       </div>
-
+      <Footer />
     </section>
   );
 };

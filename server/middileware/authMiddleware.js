@@ -75,7 +75,14 @@ const isadmin = (req, res, next) => {
 
 const isDoctor = async (req, res, next) => {
   try {
-    if (!req.user || req.user.role !== "DOCTOR") {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authenticated"
+      });
+    }
+
+    if (req.user.role !== "DOCTOR") {
       return res.status(403).json({
         success: false,
         message: "Access denied. Doctor only."
@@ -87,7 +94,7 @@ const isDoctor = async (req, res, next) => {
     if (!doctor) {
       return res.status(404).json({
         success: false,
-        message: "Doctor profile not found"
+        message: "Doctor profile not found. Please complete your doctor registration."
       });
     }
 
@@ -96,9 +103,10 @@ const isDoctor = async (req, res, next) => {
 
     next();
   } catch (error) {
+    console.error("isDoctor middleware error:", error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: "Server error in doctor verification"
     });
   }
 };

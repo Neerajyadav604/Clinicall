@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { doctorRegistration } from "../services/operations/Authapi";
 import { toast } from "react-toastify";
+import Footer from "../components/Footer";
 
 const DoctorRegistrationPage = () => {
   const navigate = useNavigate();
@@ -325,6 +326,7 @@ const DoctorRegistrationPage = () => {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

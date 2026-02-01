@@ -14,6 +14,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import MyProfile from './pages/MyProfile';
 import EditProfile from './pages/EditProfile';
 import MyRequests from './pages/MyRequests';
+import Chat from './pages/Chat';
 import DoctorRegistrationPage from './pages/DoctorRegistrationPage';
 import DoctorSearch from './pages/DoctorSearch';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -44,13 +45,14 @@ function App() {
         <Route path="/my-profile" element={<MyProfile/>} />
         <Route path="/editprofile" element={<EditProfile/>} />
         <Route path="/my-requests" element={<ProtectedRoute requiredRole="user"><MyRequests/></ProtectedRoute>} />
+        <Route path="/chat/:appointmentId" element={<ProtectedRoute requiredRole="user"><Chat/></ProtectedRoute>} />
         <Route path="/doctor-registration" element={<DoctorRegistrationPage/>} />
 
         <Route path="/doctor/*" element={<DoctorRoutes/>} />
         <Route path="/admin/*" element={<AdminRoutes/>} />
       </Routes>
       </div>
-      <Footer/>
+     
     </div>
   );
 }
