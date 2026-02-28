@@ -1,36 +1,4 @@
-// Doctor API Service
-// This file contains all API calls for the doctor dashboard
-
-const BASE_URL = process.env.REACT_APP_BASE_URL || "http://localhost:4000/api/v1";
-
-// Helper function to get auth headers
-const getAuthHeaders = () => {
-  const token = localStorage.getItem("token");
-  if (!token) {
-    throw new Error("No authentication token found. Please login first.");
-  }
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-};
-
-// Helper function to safely parse response
-const parseResponse = async (response) => {
-  const contentType = response.headers.get("content-type");
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    const errorMessage = errorData.message || `HTTP Error ${response.status}`;
-    throw new Error(errorMessage);
-  }
-
-  if (!contentType || !contentType.includes("application/json")) {
-    throw new Error("Invalid response format. Server did not return JSON.");
-  }
-
-  return await response.json();
-};
+import { axiosInstance } from "./ApiConnector";
 
 // ============================================
 // DOCTOR PROFILE APIs
@@ -41,10 +9,8 @@ const parseResponse = async (response) => {
  */
 export const getDoctorProfile = async () => {
   try {
-    const response = await fetch(`${BASE_URL}/profile/me`, {
-      headers: getAuthHeaders(),
-    });
-    return await parseResponse(response);
+    const response = await axiosInstance.get(`/profile/me`);
+    return response.data;
   } catch (error) {
     console.error("Error fetching doctor profile:", error);
     throw error;
@@ -56,10 +22,8 @@ export const getDoctorProfile = async () => {
  */
 export const getDoctorById = async (doctorId) => {
   try {
-    const response = await fetch(`${BASE_URL}/doctors/${doctorId}`, {
-      headers: getAuthHeaders(),
-    });
-    return await parseResponse(response);
+    const response = await axiosInstance.get(`/doctors/${doctorId}`);
+    return response.data;
   } catch (error) {
     console.error("Error fetching doctor by ID:", error);
     throw error;
@@ -76,14 +40,12 @@ export const getDoctorById = async (doctorId) => {
  */
 export const getDoctorAppointments = async (status = null) => {
   try {
-    let url = `${BASE_URL}/appointments/doctor`;
+    let url = `/appointments/doctor`;
     if (status) {
       url += `?status=${status}`;
     }
-    const response = await fetch(url, {
-      headers: getAuthHeaders(),
-    });
-    return await parseResponse(response);
+    const response = await axiosInstance.get(url);
+    return response.data;
   } catch (error) {
     console.error("Error fetching doctor appointments:", error);
     throw error;
@@ -96,14 +58,8 @@ export const getDoctorAppointments = async (status = null) => {
  */
 export const approveAppointment = async (appointmentId) => {
   try {
-    const response = await fetch(
-      `${BASE_URL}/appointments/${appointmentId}/approve`,
-      {
-        method: "PATCH",
-        headers: getAuthHeaders(),
-      }
-    );
-    return await parseResponse(response);
+    const response = await axiosInstance.patch(`/appointments/${appointmentId}/approve`);
+    return response.data;
   } catch (error) {
     console.error("Error approving appointment:", error);
     throw error;
@@ -118,15 +74,8 @@ export const approveAppointment = async (appointmentId) => {
 export const rejectAppointment = async (appointmentId, reason = "") => {
   try {
     const body = reason ? { cancellationReason: reason } : {};
-    const response = await fetch(
-      `${BASE_URL}/appointments/${appointmentId}/reject`,
-      {
-        method: "PATCH",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(body),
-      }
-    );
-    return await parseResponse(response);
+    const response = await axiosInstance.patch(`/appointments/${appointmentId}/reject`, body);
+    return response.data;
   } catch (error) {
     console.error("Error rejecting appointment:", error);
     throw error;
@@ -139,10 +88,8 @@ export const rejectAppointment = async (appointmentId, reason = "") => {
  */
 export const getDoctorDashboardStats = async () => {
   try {
-    const response = await fetch(`${BASE_URL}/appointments/doctor/stats`, {
-      headers: getAuthHeaders(),
-    });
-    return await parseResponse(response);
+    const response = await axiosInstance.get(`/appointments/doctor/stats`);
+    return response.data;
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
     throw error;
@@ -155,7 +102,7 @@ export const getDoctorDashboardStats = async () => {
 export const getDoctorAppointmentsByStatus = async () => {
   try {
     const appointments = await getDoctorAppointments();
-    
+
     // Group appointments by approval status
     const grouped = {
       PENDING: [],
@@ -215,18 +162,15 @@ export const getUserId = () => {
   const decoded = decodeToken();
   return decoded?.id || null;
 };
+
 /**
  * Update doctor profile
  * @param {object} profileData - Updated profile data
  */
 export const updateDoctorProfile = async (profileData) => {
   try {
-    const response = await fetch(`${BASE_URL}/profile/update`, {
-      method: "PUT",
-      headers: getAuthHeaders(),
-      body: JSON.stringify(profileData),
-    });
-    return await parseResponse(response);
+    const response = await axiosInstance.put(`/profile/update`, profileData);
+    return response.data;
   } catch (error) {
     console.error("Error updating doctor profile:", error);
     throw error;
@@ -242,14 +186,12 @@ export const uploadDoctorProfileImage = async (imageFile) => {
     const formData = new FormData();
     formData.append("image", imageFile);
 
-    const response = await fetch(`${BASE_URL}/profile/update-image`, {
-      method: "POST",
+    const response = await axiosInstance.post(`/profile/update-image`, formData, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        "Content-Type": "multipart/form-data",
       },
-      body: formData,
     });
-    return await parseResponse(response);
+    return response.data;
   } catch (error) {
     console.error("Error uploading profile image:", error);
     throw error;

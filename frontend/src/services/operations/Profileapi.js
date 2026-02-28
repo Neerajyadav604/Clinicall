@@ -1,6 +1,6 @@
 import { setUser } from "../../slices/ProfileSlice";
 import { toast } from "react-toastify";
-import { apiconnector } from "../ApiConnector";
+import { axiosInstance } from "../ApiConnector";
 import { profileendpoint } from "../Api";
 
 const {
@@ -12,16 +12,11 @@ export function updateUserProfile(token, formData) {
     console.log("Formdata", formData);
     return async (dispatch) => {
         const toastId = toast.loading("Updating profile...");
-        
+
         try {
-            const response = await apiconnector(
-                "PUT",
-                UPDATE_PROFILE_API,
-                formData,
-                {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                }
+            const response = await axiosInstance.put(
+                UPDATE_PROFILE_API.replace(process.env.REACT_APP_BASE_URL, ""),
+                formData
             );
 
             console.log("UPDATE PROFILE API RESPONSE:", response.data);
@@ -49,18 +44,18 @@ export function updateUserProfile(token, formData) {
 export function updateDisplayPicture(token, formData) {
     return async (dispatch) => {
         const toastId = toast.loading("Uploading image...");
-        
+
         try {
-            const response = await apiconnector(
-                "PUT",
+            const response = await axiosInstance.put(
                 UPDATE_PROFILE_PICTURE_API,
                 formData,
                 {
-                    "Content-Type": "multipart/form-data",
-                    Authorization: `Bearer ${token}`,
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                    },
                 }
             );
-            
+
             console.log("UPDATE_DISPLAY_PICTURE_API RESPONSE:", response.data);
 
             if (!response.data.success) {
@@ -70,7 +65,7 @@ export function updateDisplayPicture(token, formData) {
             // Update redux store
             const updatedUser = response.data.data || response.data.user || response.data.userprofile;
             dispatch(setUser(updatedUser));
-            
+
             toast.success("Display picture updated successfully");
 
         } catch (error) {

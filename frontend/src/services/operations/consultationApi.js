@@ -1,17 +1,8 @@
+import { axiosInstance } from "../ApiConnector";
+
 // ============================================
 // APPOINTMENT CONSULTATION & PAYMENT API
 // ============================================
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api/v1";
-
-// Helper to get auth headers
-const getAuthHeaders = () => {
-  const token = localStorage.getItem("token");
-  return {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
-  };
-};
 
 /**
  * Set consultation mode for appointment
@@ -21,22 +12,11 @@ const getAuthHeaders = () => {
  */
 export const setConsultationMode = async (appointmentId, mode) => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/user/appointments/${appointmentId}/consultation-mode`,
-      {
-        method: "PATCH",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ consultationMode: mode }),
-      }
+    const response = await axiosInstance.patch(
+      `/user/appointments/${appointmentId}/consultation-mode`,
+      { consultationMode: mode }
     );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || "Failed to set consultation mode");
-    }
-
-    return data;
+    return response.data;
   } catch (error) {
     console.error("Error setting consultation mode:", error);
     throw error;
@@ -50,22 +30,11 @@ export const setConsultationMode = async (appointmentId, mode) => {
  */
 export const checkChatAccess = async (appointmentId) => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/user/appointments/${appointmentId}/chat-access`,
-      {
-        method: "GET",
-        headers: getAuthHeaders(),
-      }
+    const response = await axiosInstance.get(
+      `/user/appointments/${appointmentId}/chat-access`
     );
-
-    const data = await response.json();
-    console.log("data from consultation api",data)
-
-    if (!response.ok) {
-      throw new Error(data.message || "Failed to check chat access");
-    }
-
-    return data;
+    console.log("data from consultation api", response.data);
+    return response.data;
   } catch (error) {
     console.error("Error checking chat access:", error);
     throw error;
@@ -79,24 +48,14 @@ export const checkChatAccess = async (appointmentId) => {
  */
 export const initiatePayment = async (appointmentId) => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/createOrder`,
-      {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({ appointmentId }),
-      }
+    const response = await axiosInstance.post(
+      `/createOrder`,
+      { appointmentId }
     );
-
-    const data = await response.json();
-console.log("data :", response.ok)
-    if (!response.ok) {
-      throw new Error(data.message || "Failed to initiate payment");
-    }
-    return data;
+    console.log("data :", response.status);
+    return response.data;
   } catch (error) {
     console.error("Error initiating payment:", error);
-
     throw error;
   }
 };
@@ -108,22 +67,11 @@ console.log("data :", response.ok)
  */
 export const verifyPayment = async (paymentData) => {
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/verifyPayment`,
-      {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(paymentData),
-      }
+    const response = await axiosInstance.post(
+      `/verifyPayment`,
+      paymentData
     );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || "Payment verification failed");
-    }
-
-    return data;
+    return response.data;
   } catch (error) {
     console.error("Error verifying payment:", error);
     throw error;

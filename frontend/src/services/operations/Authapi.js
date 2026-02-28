@@ -1,5 +1,5 @@
 import { setLoading, setToken } from "../../slices/authSlice"
-import { apiconnector } from "../ApiConnector"
+import { axiosInstance } from "../ApiConnector"
 import { authendpoint } from "../Api"
 import { toast } from "react-toastify"
 import { setUser } from "../../slices/ProfileSlice"
@@ -17,7 +17,7 @@ export function sendOtp(email, navigate) {
         const toastId = toast.loading("Loading...")
         dispatch(setLoading(true))
         try {
-            const response = await apiconnector("POST", SEND_OTP_API, { email, checkUserPresent: false })
+            const response = await axiosInstance.post(SEND_OTP_API, { email, checkUserPresent: false })
 
             console.log("SEND OTP API RESPONSE...............", response)
             if (!response.data.success) {
@@ -43,7 +43,7 @@ export function signup(role, fullName, contact, email, password, otp, navigate) 
     dispatch(setLoading(true));
 
     try {
-      const response = await apiconnector("POST", SIGNUP_API, {
+      const response = await axiosInstance.post(SIGNUP_API, {
         role,
         fullName,
         contact,
@@ -77,7 +77,7 @@ export function login(email, password, navigate) {
         const toastId = toast.loading("Loading...")
         dispatch(setLoading(true))
         try {
-            const response = await apiconnector("POST", LOGIN_API, {
+            const response = await axiosInstance.post(LOGIN_API, {
                 email,
                 password,
             })
@@ -92,15 +92,15 @@ export function login(email, password, navigate) {
             dispatch(setToken(response.data.token))
            console.log(response.data.user);
 
-      const data2 = dispatch(setUser( response.data.user ))
+      const data2 = dispatch(setUser( response.data.user  ))
       console.log(data2);
 
             localStorage.setItem("token", response.data.token)
             localStorage.setItem("user", JSON.stringify(response.data.user))
-            
+
             // Navigate based on user role
             const userRole = response.data.user?.role || "user";
-            
+
             if (userRole === "ADMIN") {
                 navigate("/admin");
             } else if (userRole === "DOCTOR") {
@@ -125,7 +125,7 @@ export function logout(navigate) {
   return (dispatch) => {
     dispatch(setToken(null))
     dispatch(setUser(null))
-   
+
     localStorage.removeItem("token")
     localStorage.removeItem("user")
     toast.success("Logged Out")
@@ -135,15 +135,15 @@ export function logout(navigate) {
 
 
 export function doctorRegistration(formData, token, navigate) {
-  
+
   return async (dispatch) => {
     const toastId = toast.loading("Submitting your registration...");
     dispatch(setLoading(true));
-    
+
     try {
       // Create FormData to handle file uploads
       const doctorFormData = new FormData();
-      
+
       // Add text fields
       doctorFormData.append("fullName", formData.fullName);
       doctorFormData.append("email", formData.email);
@@ -153,51 +153,50 @@ export function doctorRegistration(formData, token, navigate) {
       doctorFormData.append("experienceYears", formData.experienceYears);
       doctorFormData.append("licenseNumber", formData.licenseNumber);
       doctorFormData.append("hospitalName", formData.hospitalName);
-      
+
       // Add image file
       if (formData.image) {
         doctorFormData.append("image", formData.image);
       }
-      
+
       // Add documents URL as string
       if (formData.documents) {
         doctorFormData.append("documents", formData.documents);
       }
-      
-      const headers = {
-        Authorization: `Bearer ${token}`,
-      };
-      
-      const response = await apiconnector(
-        "POST",
+
+      const response = await axiosInstance.post(
         DOCTOR_REGISTRATION_API,
         doctorFormData,
-        headers
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
       );
-      
+
       console.log("DOCTOR REGISTRATION API RESPONSE:", response);
-      
+
       if (!response.data.success) {
         throw new Error(response.data.message || "Registration failed");
       }
-      
+
       toast.success("✅ Registration submitted successfully!");
       toast.info("Your application is under review. You will receive updates via email.");
-      
+
       // Navigate to a verification pending page or back to profile
       setTimeout(() => {
         navigate("/my-profile");
       }, 2000);
-      
+
     } catch (err) {
       console.log("DOCTOR REGISTRATION API ERROR:", err);
-      
+
       // Extract error message
-      const errorMsg = 
-        err.response?.data?.message || 
-        err.message || 
+      const errorMsg =
+        err.response?.data?.message ||
+        err.message ||
         "Doctor registration failed. Please try again.";
-      
+
       toast.error(errorMsg);
     } finally {
       dispatch(setLoading(false));
