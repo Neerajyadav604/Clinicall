@@ -5,7 +5,7 @@ export const NavbarLinks = [
 },
 {
     title:"Appointment",
-    path:"/search",
+    path:"/appointment",
     protected:"true",
     role: "user"
 },
@@ -18,7 +18,8 @@ export const NavbarLinks = [
 {
     title:"Register",
     path:"/doctor-registration",
-    protected:"true"
+    protected:"true",
+    role: "user"
 },
 {
     title:"About",

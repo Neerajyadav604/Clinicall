@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const fieldEncryption = require('mongoose-field-encryption').fieldEncryption;
 
 const UserProfileSchema = new mongoose.Schema(
   {
@@ -30,5 +31,11 @@ const UserProfileSchema = new mongoose.Schema(
   },
   
 );
+
+// encrypt sensitive fields
+UserProfileSchema.plugin(fieldEncryption, {
+  fields: ['address','medicalHistory','medications','emergencyContact','insurance'],
+  secret: process.env.FIELD_ENC_KEY || 'change_this_in_prod',
+});
 
 module.exports = mongoose.model("userProfile",UserProfileSchema)

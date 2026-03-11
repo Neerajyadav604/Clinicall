@@ -1,9 +1,101 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Save, X } from 'lucide-react';
+import { ArrowLeft, Save } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { updateUserProfile } from '../services/operations/Profileapi';
+import ProfileAvatar from "../components/EditProfile/ProfileAvatar";
+import { updateUserProfile } from "../services/operations/Profileapi";
+
+const parseListValue = (value) => {
+  if (!value) return "";
+  if (Array.isArray(value)) return value.join(", ");
+  return value;
+};
+
+const toPayloadList = (value) =>
+  value
+    ? value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
+
+const buildDefaultValues = (user) => {
+  const details = user?.additionalDetails || user || {};
+  const insurance = details.insurance || user?.insurance || {};
+
+  return {
+    fullName: user?.fullName || "",
+    email: user?.email || "",
+    contact: user?.contact || "",
+    address: details.address || user?.address || "",
+    dob: details.dob || user?.dob || "",
+    gender: details.gender || user?.gender || "",
+    bloodGroup: details.bloodGroup || user?.bloodGroup || "",
+    emergencyContact: details.emergencyContact || user?.emergencyContact || "",
+    allergies: parseListValue(details.allergies || user?.allergies),
+    medications: parseListValue(details.medications || user?.medications),
+    medicalHistory: parseListValue(details.medicalHistory || user?.medicalHistory),
+    insuranceProvider:
+      insurance.provider || details.insuranceProvider || user?.insuranceProvider || "",
+    policyNumber:
+      insurance.policyNumber || details.policyNumber || user?.policyNumber || "",
+  };
+};
+
+const SectionCard = ({ title, subtitle, children }) => (
+  <section className="rounded-[20px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_14px_30px_-24px_rgba(2,6,23,0.4)] md:p-6">
+    <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+    {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
+    <div className="mt-5">{children}</div>
+  </section>
+);
+
+const FieldLabel = ({ children }) => (
+  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+    {children}
+  </label>
+);
+
+const TextInput = ({ register, name, rules, error, ...props }) => (
+  <>
+    <input
+      {...register(name, rules)}
+      {...props}
+      className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20 ${
+        error ? "border-rose-400" : "border-slate-200"
+      } ${props.className || ""}`}
+    />
+    {error ? <p className="mt-1 text-xs text-rose-500">{error.message}</p> : null}
+  </>
+);
+
+const TextArea = ({ register, name, rules, error, ...props }) => (
+  <>
+    <textarea
+      {...register(name, rules)}
+      {...props}
+      className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20 ${
+        error ? "border-rose-400" : "border-slate-200"
+      } ${props.className || ""}`}
+    />
+    {error ? <p className="mt-1 text-xs text-rose-500">{error.message}</p> : null}
+  </>
+);
+
+const SelectInput = ({ register, name, rules, error, children }) => (
+  <>
+    <select
+      {...register(name, rules)}
+      className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20 ${
+        error ? "border-rose-400" : "border-slate-200"
+      }`}
+    >
+      {children}
+    </select>
+    {error ? <p className="mt-1 text-xs text-rose-500">{error.message}</p> : null}
+  </>
+);
 
 const EditProfile = () => {
   const { user } = useSelector((state) => state.profile);
@@ -12,368 +104,282 @@ const EditProfile = () => {
   const dispatch = useDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const defaultValues = useMemo(() => buildDefaultValues(user), [user]);
+
   const {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
+    watch,
     setValue,
-    watch
   } = useForm({
-    defaultValues: {
-      fullName: user?.fullName || '',
-      email: user?.email || '',
-      contact: user?.contact || '',
-      address: user?.additionalDetails?.address || '',
-      dob: user?.additionalDetails?.dob || '',
-      gender: user?.additionalDetails?.gender || '',
-      bloodGroup: user?.additionalDetails?.bloodGroup || '',
-      emergencyContact: user?.additionalDetails?.emergencyContact || '',
-      allergies: user?.additionalDetails?.allergies || '',
-      medications: user?.additionalDetails?.medications || '',
-      medicalHistory: user?.additionalDetails?.medicalHistory || '',
-      insuranceProvider: user?.additionalDetails?.insuranceProvider || '',
-      policyNumber: user?.additionalDetails?.policyNumber || '',
-    }
+    defaultValues,
   });
 
-  const formData = watch();
-
   useEffect(() => {
-    if (user) {
-      setValue('fullName', user.fullName || '');
-      setValue('email', user.email || '');
-      setValue('contact', user.contact || '');
+    reset(defaultValues);
+  }, [defaultValues, reset]);
 
-      // Handle both direct properties and nested additionalDetails
-      const details = user.additionalDetails || user;
-
-      setValue('address', details.address || user.address || '');
-      setValue('dob', details.dob || user.dob || '');
-      setValue('gender', details.gender || user.gender || '');
-      setValue('bloodGroup', details.bloodGroup || user.bloodGroup || '');
-      setValue('emergencyContact', details.emergencyContact || user.emergencyContact || '');
-
-      // Handle array data for allergies
-      setValue(
-        'allergies',
-        Array.isArray(details.allergies)
-          ? details.allergies.join(', ')
-          : Array.isArray(user.allergies)
-          ? user.allergies.join(', ')
-          : details.allergies || user.allergies || ''
-      );
-
-      // Handle array data for medications
-      setValue(
-        'medications',
-        Array.isArray(details.medications)
-          ? details.medications.join(', ')
-          : Array.isArray(user.medications)
-          ? user.medications.join(', ')
-          : details.medications || user.medications || ''
-      );
-
-      // Handle array data for medical history
-      setValue(
-        'medicalHistory',
-        Array.isArray(details.medicalHistory)
-          ? details.medicalHistory.join(', ')
-          : Array.isArray(user.medicalHistory)
-          ? user.medicalHistory.join(', ')
-          : details.medicalHistory || user.medicalHistory || ''
-      );
-
-      // Handle insurance data
-      const insurance = details.insurance || user.insurance || {};
-      setValue('insuranceProvider', insurance.provider || details.insuranceProvider || user.insuranceProvider || '');
-      setValue('policyNumber', insurance.policyNumber || details.policyNumber || user.policyNumber || '');
-    }
-  }, [user, setValue]);
+  const watched = watch(["fullName", "email", "contact", "address"]);
+  const completion = useMemo(() => {
+    const filled = watched.filter((item) => String(item || "").trim()).length;
+    return Math.round((filled / watched.length) * 100);
+  }, [watched]);
 
   const submitProfileForm = async (data) => {
     setIsSubmitting(true);
     try {
       const payload = {
         ...data,
-        medications: data.medications
-          ? data.medications.split(",").map(item => item.trim())
-          : [],
-        allergies: data.allergies
-          ? data.allergies.split(",").map(item => item.trim())
-          : [],
-        medicalHistory: data.medicalHistory
-          ? data.medicalHistory.split(",").map(item => item.trim())
-          : [],
+        allergies: toPayloadList(data.allergies),
+        medications: toPayloadList(data.medications),
+        medicalHistory: toPayloadList(data.medicalHistory),
       };
-      console.log("Payload:", payload);
       await dispatch(updateUserProfile(token, payload));
-   
-    } catch (err) {
-      console.log("Error Occurred:", err.message);
+      navigate("/my-profile");
+    } catch (error) {
+      console.error("Error updating profile:", error?.message || error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleCancel = () => {
-    navigate(-1);
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8 mt-24">
-      <div className="max-w-full mx-auto px-4 md:px-8">
-        <div className="bg-white rounded-lg shadow-sm">
-          <form onSubmit={handleSubmit(submitProfileForm)}>
-            <div className="p-6 md:p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl md:text-3xl font-normal text-gray-800">Edit Profile</h1>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200"
-                  >
-                    <X className="w-4 h-4" />
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50"
-                  >
-                    <Save className="w-4 h-4" />
-                    {isSubmitting ? 'Saving...' : 'Save Changes'}
-                  </button>
-                </div>
+    <div
+      className="min-h-screen bg-[var(--page)] px-4 py-8 md:px-8"
+      style={{
+        "--page": "#f3f7fb",
+        "--surface": "#ffffff",
+        "--line": "#d9e2ec",
+      }}
+    >
+      <div className="mx-auto max-w-6xl space-y-6">
+        <header className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-[#0f172a] via-[#0f3b4a] to-[#0d1f2d] p-6 text-white shadow-[0_28px_60px_-36px_rgba(2,6,23,0.85)] md:p-8">
+          <div className="pointer-events-none absolute -left-12 -top-12 h-40 w-40 rounded-full bg-cyan-400/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-20 right-0 h-48 w-48 rounded-full bg-emerald-300/20 blur-3xl" />
+
+          <div className="relative flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-cyan-100">Profile Studio</p>
+              <h1
+                className="mt-2 text-3xl leading-tight md:text-4xl"
+                style={{ fontFamily: 'Fraunces, "Times New Roman", serif' }}
+              >
+                Edit Profile
+              </h1>
+              <p className="mt-2 max-w-xl text-sm text-cyan-100">
+                Update personal, medical, and insurance details for a more personalized care flow.
+              </p>
+            </div>
+
+            <div className="w-full max-w-xs rounded-xl border border-white/20 bg-white/10 p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs uppercase tracking-wide text-cyan-100">Form completeness</p>
+                <p className="text-sm font-semibold">{completion}%</p>
               </div>
-
-              <div className="grid md:grid-cols-2 gap-8">
-                {/* Left Column - Personal Information */}
-                <div>
-                  <h3 className="text-gray-400 text-xs uppercase mb-4">Personal Information</h3>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-1">
-                        Full Name *
-                      </label>
-                      <input
-                        type="text"
-                        {...register("fullName", { required: "Full name is required" })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      {errors.fullName && (
-                        <p className="text-red-500 text-xs mt-1">{errors.fullName.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-1">
-                        Email *
-                      </label>
-                      <input
-                        type="email"
-                        {...register("email", {
-                          required: "Email is required",
-                          pattern: {
-                            value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                            message: "Invalid email address"
-                          }
-                        })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      {errors.email && (
-                        <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-1">
-                        Phone Number *
-                      </label>
-                      <input
-                        type="tel"
-                        {...register("contact", { required: "Phone number is required" })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      {errors.contact && (
-                        <p className="text-red-500 text-xs mt-1">{errors.contact.message}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-1">
-                        Address
-                      </label>
-                      <textarea
-                        {...register("address")}
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-1">
-                          Date of Birth
-                        </label>
-                        <input
-                          type="date"
-                          {...register("dob")}
-                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-1">
-                          Gender
-                        </label>
-                        <select
-                          {...register("gender")}
-                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select</option>
-                          <option value="Male">Male</option>
-                          <option value="Female">Female</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-1">
-                          Blood Group
-                        </label>
-                        <select
-                          {...register("bloodGroup")}
-                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select</option>
-                          <option value="A+">A+</option>
-                          <option value="A-">A-</option>
-                          <option value="B+">B+</option>
-                          <option value="B-">B-</option>
-                          <option value="O+">O+</option>
-                          <option value="O-">O-</option>
-                          <option value="AB+">AB+</option>
-                          <option value="AB-">AB-</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-1">
-                          Emergency Contact
-                        </label>
-                        <input
-                          type="tel"
-                          {...register("emergencyContact")}
-                          className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Column - Medical Information */}
-                <div>
-                  <h3 className="text-gray-400 text-xs uppercase mb-4">Medical Information</h3>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-1">
-                        Allergies
-                      </label>
-                      <input
-                        type="text"
-                        {...register("allergies")}
-                        placeholder="Separate with commas (e.g., Peanuts, Penicillin)"
-                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Separate multiple items with commas</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-1">
-                        Current Medications
-                      </label>
-                      <textarea
-                        {...register("medications")}
-                        rows={3}
-                        placeholder="Separate with commas (e.g., Lisinopril, Metformin)"
-                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Separate multiple items with commas</p>
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-1">
-                        Medical History
-                      </label>
-                      <textarea
-                        {...register("medicalHistory")}
-                        rows={3}
-                        placeholder="Separate with commas (e.g., Hypertension, Diabetes)"
-                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">Separate multiple items with commas</p>
-                    </div>
-
-                    <div className="pt-4 border-t border-gray-200">
-                      <h4 className="text-gray-700 text-sm font-medium mb-3">Insurance Information</h4>
-
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-gray-700 text-sm font-medium mb-1">
-                            Insurance Provider
-                          </label>
-                          <input
-                            type="text"
-                            {...register("insuranceProvider")}
-                            placeholder="e.g., HealthCare Plus"
-                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-gray-700 text-sm font-medium mb-1">
-                            Policy Number
-                          </label>
-                          <input
-                            type="text"
-                            {...register("policyNumber")}
-                            placeholder="e.g., HCP-123456789"
-                            className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Mobile Save Button */}
-              <div className="mt-8 md:hidden flex gap-3">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200"
-                >
-                  <X className="w-4 h-4" />
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 disabled:opacity-50"
-                >
-                  <Save className="w-4 h-4" />
-                  {isSubmitting ? 'Saving...' : 'Save'}
-                </button>
+              <div className="mt-2 h-2 rounded-full bg-white/15">
+                <div
+                  className="h-2 rounded-full bg-emerald-300 transition-all"
+                  style={{ width: `${completion}%` }}
+                />
               </div>
             </div>
-          </form>
-        </div>
+          </div>
+        </header>
+
+        <form onSubmit={handleSubmit(submitProfileForm)} className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex items-center gap-2 rounded-xl bg-cyan-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-800 disabled:opacity-70"
+            >
+              <Save className="h-4 w-4" />
+              {isSubmitting ? "Saving..." : "Save changes"}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <SectionCard
+              title="Personal Information"
+              subtitle="These details are visible in your primary profile."
+            >
+              <div className="space-y-4">
+                <div className="mb-4">
+                  <ProfileAvatar
+                    name={watch("fullName")}
+                    avatarUrl={user?.avatarUrl}
+                    onChange={(file) => setValue("avatarFile", file)}
+                  />
+                </div>
+                <div>
+                  <FieldLabel>Full Name *</FieldLabel>
+                  <TextInput
+                    register={register}
+                    name="fullName"
+                    rules={{ required: "Full name is required" }}
+                    error={errors.fullName}
+                    type="text"
+                  />
+                </div>
+
+                <div>
+                  <FieldLabel>Email *</FieldLabel>
+                  <TextInput
+                    register={register}
+                    name="email"
+                    rules={{
+                      required: "Email is required",
+                      pattern: {
+                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                        message: "Invalid email address",
+                      },
+                    }}
+                    error={errors.email}
+                    type="email"
+                  />
+                </div>
+
+                <div>
+                  <FieldLabel>Phone Number *</FieldLabel>
+                  <TextInput
+                    register={register}
+                    name="contact"
+                    rules={{ required: "Phone number is required" }}
+                    error={errors.contact}
+                    type="tel"
+                  />
+                </div>
+
+                <div>
+                  <FieldLabel>Address</FieldLabel>
+                  <TextArea register={register} name="address" rows={3} />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <FieldLabel>Date of Birth</FieldLabel>
+                    <TextInput register={register} name="dob" type="date" />
+                  </div>
+                  <div>
+                    <FieldLabel>Gender</FieldLabel>
+                    <SelectInput register={register} name="gender">
+                      <option value="">Select</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </SelectInput>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <FieldLabel>Blood Group</FieldLabel>
+                    <SelectInput register={register} name="bloodGroup">
+                      <option value="">Select</option>
+                      <option value="A+">A+</option>
+                      <option value="A-">A-</option>
+                      <option value="B+">B+</option>
+                      <option value="B-">B-</option>
+                      <option value="O+">O+</option>
+                      <option value="O-">O-</option>
+                      <option value="AB+">AB+</option>
+                      <option value="AB-">AB-</option>
+                    </SelectInput>
+                  </div>
+                  <div>
+                    <FieldLabel>Emergency Contact</FieldLabel>
+                    <TextInput register={register} name="emergencyContact" type="tel" />
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              title="Medical & Insurance"
+              subtitle="Use comma-separated values for medical list fields."
+            >
+              <div className="space-y-4">
+                <div>
+                  <FieldLabel>Allergies</FieldLabel>
+                  <TextInput
+                    register={register}
+                    name="allergies"
+                    placeholder="Peanuts, Penicillin"
+                  />
+                </div>
+
+                <div>
+                  <FieldLabel>Current Medications</FieldLabel>
+                  <TextArea
+                    register={register}
+                    name="medications"
+                    rows={3}
+                    placeholder="Lisinopril, Metformin"
+                  />
+                </div>
+
+                <div>
+                  <FieldLabel>Medical History</FieldLabel>
+                  <TextArea
+                    register={register}
+                    name="medicalHistory"
+                    rows={3}
+                    placeholder="Hypertension, Diabetes"
+                  />
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <h3 className="text-sm font-semibold text-slate-800">Insurance Information</h3>
+                  <div className="mt-3 space-y-4">
+                    <div>
+                      <FieldLabel>Insurance Provider</FieldLabel>
+                      <TextInput
+                        register={register}
+                        name="insuranceProvider"
+                        placeholder="HealthCare Plus"
+                      />
+                    </div>
+                    <div>
+                      <FieldLabel>Policy Number</FieldLabel>
+                      <TextInput
+                        register={register}
+                        name="policyNumber"
+                        placeholder="HCP-123456789"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
+          </div>
+
+          <div className="flex gap-3 md:hidden">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 rounded-xl bg-cyan-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-70"
+            >
+              {isSubmitting ? "Saving..." : "Save"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

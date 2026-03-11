@@ -1,17 +1,50 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getUserRequests, getRequestsByStatus } from "../services/operations/requestApi";
-import { setConsultationMode, checkChatAccess, initiatePayment, verifyPayment } from "../services/operations/consultationApi";
 import { toast } from "react-toastify";
+import {
+  checkChatAccess,
+  initiatePayment,
+  setConsultationMode,
+  verifyPayment,
+} from "../services/operations/consultationApi";
+import {
+  getRequestsByStatus,
+  getUserRequests,
+} from "../services/operations/requestApi";
 
-/**
- * MyRequests Component
- * Displays all user appointment requests with filtering by status
- */
+const STATUS_META = {
+  APPROVED: {
+    label: "Approved",
+    chip: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    dot: "bg-emerald-500",
+  },
+  REJECTED: {
+    label: "Rejected",
+    chip: "bg-rose-50 text-rose-700 border-rose-200",
+    dot: "bg-rose-500",
+  },
+  PENDING: {
+    label: "Pending",
+    chip: "bg-amber-50 text-amber-700 border-amber-200",
+    dot: "bg-amber-500",
+  },
+  CANCELLED: {
+    label: "Cancelled",
+    chip: "bg-slate-50 text-slate-700 border-slate-200",
+    dot: "bg-slate-500",
+  },
+  DEFAULT: {
+    label: "Updated",
+    chip: "bg-sky-50 text-sky-700 border-sky-200",
+    dot: "bg-sky-500",
+  },
+};
+
+const FILTERS = ["ALL", "PENDING", "APPROVED", "REJECTED"];
+
 const MyRequests = () => {
   const navigate = useNavigate();
   const [requests, setRequests] = useState([]);
-  const [filteredRequests, setFilteredRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState({});
   const [processingConsultation, setProcessingConsultation] = useState({});
@@ -23,65 +56,34 @@ const MyRequests = () => {
   });
   const [selectedStatus, setSelectedStatus] = useState("ALL");
 
-  // Status badge styling
-  const getStatusStyle = (status) => {
-    switch (status) {
-      case "APPROVED":
-        return {
-          bg: "bg-green-100",
-          text: "text-green-800",
-          border: "border-green-300",
-          dot: "bg-green-500",
-        };
-      case "REJECTED":
-        return {
-          bg: "bg-red-100",
-          text: "text-red-800",
-          border: "border-red-300",
-          dot: "bg-red-500",
-        };
-      case "PENDING":
-        return {
-          bg: "bg-yellow-100",
-          text: "text-yellow-800",
-          border: "border-yellow-300",
-          dot: "bg-yellow-500",
-        };
-      case "CANCELLED":
-        return {
-          bg: "bg-gray-100",
-          text: "text-gray-800",
-          border: "border-gray-300",
-          dot: "bg-gray-500",
-        };
-      default:
-        return {
-          bg: "bg-blue-100",
-          text: "text-blue-800",
-          border: "border-blue-300",
-          dot: "bg-blue-500",
-        };
+  const userPrefill = useMemo(() => {
+    const userRaw = localStorage.getItem("user");
+    if (!userRaw) return { name: "", email: "" };
+    try {
+      const parsed = JSON.parse(userRaw);
+      return {
+        name: parsed?.fullName || "",
+        email: parsed?.email || "",
+      };
+    } catch (error) {
+      return { name: "", email: "" };
     }
-  };
+  }, []);
 
-  // Fetch requests
   useEffect(() => {
     const fetchRequests = async () => {
       try {
         setLoading(true);
-
-        // Fetch requests and stats in parallel
         const [requestsRes, statsRes] = await Promise.all([
           getUserRequests("ALL"),
           getRequestsByStatus(),
         ]);
 
-        if (requestsRes.success && Array.isArray(requestsRes.data)) {
+        if (requestsRes?.success && Array.isArray(requestsRes.data)) {
           setRequests(requestsRes.data);
-          setFilteredRequests(requestsRes.data);
         }
 
-        if (statsRes.success) {
+        if (statsRes?.success && statsRes.data) {
           setStats(statsRes.data);
         }
       } catch (error) {
@@ -95,143 +97,103 @@ const MyRequests = () => {
     fetchRequests();
   }, []);
 
-  // Filter requests by status
-  const handleStatusFilter = (status) => {
-    setSelectedStatus(status);
-    if (status === "ALL") {
-      setFilteredRequests(requests);
-    } else {
-      setFilteredRequests(requests.filter((req) => req.approvalstatus === status));
-    }
-  };
+  const filteredRequests = useMemo(() => {
+    if (selectedStatus === "ALL") return requests;
+    return requests.filter((req) => req.approvalstatus === selectedStatus);
+  }, [requests, selectedStatus]);
 
-  // Format date
   const formatDate = (dateString) => {
+    if (!dateString) return "Not specified";
     const options = { year: "numeric", month: "short", day: "numeric" };
     return new Date(dateString).toLocaleDateString("en-US", options);
   };
 
-  // Format time
-  const formatTime = (timeString) => {
-    if (!timeString) return "Not specified";
-    return timeString;
+  const formatTime = (timeString) => timeString || "Not specified";
+
+  const updateRequest = (appointmentId, patch) => {
+    setRequests((prev) =>
+      prev.map((request) =>
+        request._id === appointmentId ? { ...request, ...patch } : request
+      )
+    );
   };
 
-  // Handle offline consultation
   const handleOfflineConsultation = async (appointmentId) => {
     try {
-      setProcessingConsultation({ ...processingConsultation, [appointmentId]: true });
+      setProcessingConsultation((prev) => ({ ...prev, [appointmentId]: true }));
       const response = await setConsultationMode(appointmentId, "offline");
-      
-      if (response.success) {
-        toast.success("Offline consultation selected. Visit the clinic on your appointment date.");
-        
-        // Update requests list
-        const updatedRequests = requests.map((req) =>
-          req._id === appointmentId
-            ? { ...req, consultationMode: "offline", paymentStatus: "unpaid" }
-            : req
+
+      if (response?.success) {
+        toast.success(
+          "Offline consultation selected. Visit the clinic on your appointment date."
         );
-        setRequests(updatedRequests);
-        setFilteredRequests(updatedRequests.filter((r) => 
-          selectedStatus === "ALL" || r.approvalstatus === selectedStatus
-        ));
+        updateRequest(appointmentId, {
+          consultationMode: "offline",
+          paymentStatus: "unpaid",
+        });
       }
     } catch (error) {
       toast.error(error.message || "Failed to set offline consultation");
     } finally {
-      setProcessingConsultation({ ...processingConsultation, [appointmentId]: false });
+      setProcessingConsultation((prev) => ({ ...prev, [appointmentId]: false }));
     }
   };
 
-  // Handle online consultation with payment
   const handleOnlineConsultation = async (appointmentId) => {
     try {
-      setProcessingPayment({ ...processingPayment, [appointmentId]: true });
-      
-      // Initiate payment
+      setProcessingPayment((prev) => ({ ...prev, [appointmentId]: true }));
       const paymentResponse = await initiatePayment(appointmentId);
-      
-      console.log(paymentResponse)
 
-      if (paymentResponse.success && paymentResponse.key && paymentResponse.orderId) {
-       
-
-        // Open Razorpay payment modal
+      if (paymentResponse?.success && paymentResponse.key && paymentResponse.orderId) {
         const options = {
           key: paymentResponse.key,
           amount: paymentResponse.amount,
           currency: paymentResponse.currency,
           order_id: paymentResponse.orderId,
           handler: async (response) => {
-           
-
             try {
-              // Verify payment
               const verifyResponse = await verifyPayment({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
               });
 
-             
-
-
-              if (verifyResponse.success) {
-                toast.success("Payment successful! Chat enabled.");
-                
-                // Update requests list
-                const updatedRequests = requests.map((req) =>
-                  req._id === appointmentId
-                    ? { ...req, consultationMode: "online", paymentStatus: "paid", isChatEnabled: true }
-                    : req
-                );
-                setRequests(updatedRequests);
-                setFilteredRequests(updatedRequests.filter((r) => 
-                  selectedStatus === "ALL" || r.approvalstatus === selectedStatus
-                ));
-                
-                // Navigate to chat
+              if (verifyResponse?.success) {
+                toast.success("Payment successful. Chat enabled.");
+                updateRequest(appointmentId, {
+                  consultationMode: "online",
+                  paymentStatus: "paid",
+                  isChatEnabled: true,
+                });
                 setTimeout(() => navigate(`/chat/${appointmentId}`), 1000);
               }
             } catch (error) {
               toast.error(error.message || "Payment verification failed");
             }
           },
-          prefill: {
-            name: localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")).fullName : "",
-            email: localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")).email : "",
-          },
-          theme: {
-            color: "#2563eb",
-          },
+          prefill: userPrefill,
+          theme: { color: "#0f766e" },
         };
 
         const razorpay = new window.Razorpay(options);
         razorpay.open();
       } else {
-      
-        
         toast.error("Failed to initiate payment");
       }
     } catch (error) {
-      
-
       toast.error(error.message || "Failed to initiate payment");
     } finally {
-      setProcessingPayment({ ...processingPayment, [appointmentId]: false });
+      setProcessingPayment((prev) => ({ ...prev, [appointmentId]: false }));
     }
   };
 
-  // Handle start chat button
   const handleStartChat = async (appointmentId) => {
     try {
       const chatResponse = await checkChatAccess(appointmentId);
-      
-      if (chatResponse.canAccess) {
+      if (chatResponse?.canAccess) {
         navigate(`/chat/${appointmentId}`);
       } else {
-        toast.error(chatResponse.reason || "Chat access not available");
+        toast.error(chatResponse?.reason || "Chat access not available");
       }
     } catch (error) {
       toast.error(error.message || "Failed to access chat");
@@ -240,267 +202,234 @@ const MyRequests = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 py-20 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse space-y-6">
-            <div className="h-12 bg-gray-200 rounded-lg w-1/3"></div>
-            <div className="h-32 bg-gray-200 rounded-lg"></div>
-            <div className="h-96 bg-gray-200 rounded-lg"></div>
+      <div className="min-h-screen bg-slate-50 px-4 py-10 md:px-8">
+        <div className="mx-auto max-w-6xl space-y-6">
+          <div className="h-10 w-64 animate-pulse rounded-xl bg-slate-200" />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            {[0, 1, 2, 3].map((item) => (
+              <div
+                key={item}
+                className="h-28 animate-pulse rounded-2xl border border-slate-200 bg-white"
+              />
+            ))}
           </div>
+          <div className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-white" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 py-20 px-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Page Header */}
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold text-blue-900 mb-3">My Requests</h1>
-          <p className="text-blue-600 text-lg">
-            Track and manage your appointment requests with doctors
+    <div className="min-h-screen bg-slate-50 px-4 py-10 md:px-8">
+      <div className="mx-auto max-w-6xl space-y-8">
+        <header className="rounded-3xl border border-slate-200 bg-gradient-to-r from-teal-900 via-cyan-900 to-slate-900 p-6 text-white md:p-8">
+          <p className="text-xs uppercase tracking-[0.2em] text-cyan-100">Patient Portal</p>
+          <h1 className="mt-2 text-3xl font-semibold md:text-4xl">My Requests</h1>
+          <p className="mt-2 max-w-2xl text-sm text-cyan-100 md:text-base">
+            Track approvals, pick consultation mode, and continue eligible chats from one place.
           </p>
-        </div>
+        </header>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
-            { label: "Total", value: stats.total, color: "blue" },
-            { label: "Approved", value: stats.approved, color: "green" },
-            { label: "Pending", value: stats.pending, color: "yellow" },
-            { label: "Rejected", value: stats.rejected, color: "red" },
-          ].map((stat, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-lg shadow-md p-6 border-l-4 border-l-blue-600"
+            { label: "Total Requests", value: stats.total, tone: "text-slate-900" },
+            { label: "Approved", value: stats.approved, tone: "text-emerald-700" },
+            { label: "Pending", value: stats.pending, tone: "text-amber-700" },
+            { label: "Rejected", value: stats.rejected, tone: "text-rose-700" },
+          ].map((stat) => (
+            <article
+              key={stat.label}
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
             >
-              <p className="text-gray-600 text-sm font-medium mb-2">{stat.label}</p>
-              <p className="text-3xl font-bold text-blue-900">{stat.value}</p>
-            </div>
+              <p className="text-xs uppercase tracking-wide text-slate-500">{stat.label}</p>
+              <p className={`mt-2 text-3xl font-semibold ${stat.tone}`}>{stat.value || 0}</p>
+            </article>
           ))}
-        </div>
+        </section>
 
-        {/* Filter Buttons */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <h3 className="text-lg font-semibold text-blue-900 mb-4">Filter by Status</h3>
-          <div className="flex flex-wrap gap-3">
-            {["ALL", "PENDING", "APPROVED", "REJECTED"].map((status) => (
-              <button
-                key={status}
-                onClick={() => handleStatusFilter(status)}
-                className={`px-6 py-2 rounded-full font-medium transition-all ${
-                  selectedStatus === status
-                    ? "bg-blue-600 text-white shadow-lg"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                {status}
-              </button>
-            ))}
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-6">
+          <div className="flex flex-wrap gap-2">
+            {FILTERS.map((status) => {
+              const isSelected = selectedStatus === status;
+              return (
+                <button
+                  key={status}
+                  onClick={() => setSelectedStatus(status)}
+                  className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                    isSelected
+                      ? "border-cyan-700 bg-cyan-700 text-white"
+                      : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  {status}
+                </button>
+              );
+            })}
           </div>
-        </div>
+        </section>
 
-        {/* Requests List */}
-        <div className="space-y-4">
+        <section className="space-y-4">
           {filteredRequests.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-md p-12 text-center">
-              <svg
-                className="w-16 h-16 text-gray-400 mx-auto mb-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">No requests found</h3>
-              <p className="text-gray-600">
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
+              <h2 className="text-xl font-semibold text-slate-800">No requests found</h2>
+              <p className="mt-2 text-slate-600">
                 {selectedStatus === "ALL"
-                  ? "You haven't submitted any appointment requests yet."
+                  ? "You have not submitted any appointment request yet."
                   : `No ${selectedStatus.toLowerCase()} requests at this time.`}
               </p>
             </div>
           ) : (
             filteredRequests.map((request) => {
-              const statusStyle = getStatusStyle(request.approvalstatus);
+              const status = STATUS_META[request.approvalstatus] || STATUS_META.DEFAULT;
               return (
-                <div
+                <article
                   key={request._id}
-                  className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border-l-4 border-l-blue-600"
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6"
                 >
-                  {/* Header with Status */}
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-4">
+                  <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 md:flex-row md:items-start md:justify-between">
                     <div>
-                      <h3 className="text-xl font-bold text-blue-900">
+                      <h3 className="text-xl font-semibold text-slate-900">
                         {request.doctorId?.fullName || "Doctor"}
                       </h3>
-                      <p className="text-gray-600 text-sm mt-1">
+                      <p className="mt-1 text-sm text-slate-600">
                         {request.doctorId?.specialization || "Medical Professional"}
                       </p>
                     </div>
-                    <div
-                      className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border} font-semibold`}
+                    <span
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${status.chip}`}
                     >
-                      <span className={`w-3 h-3 rounded-full ${statusStyle.dot}`}></span>
-                      {request.approvalstatus}
-                    </div>
+                      <span className={`h-2.5 w-2.5 rounded-full ${status.dot}`} />
+                      {status.label}
+                    </span>
                   </div>
 
-                  {/* Details Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                    {/* Date */}
-                    <div className="bg-blue-50 rounded-lg p-3">
-                      <p className="text-gray-600 text-xs font-medium mb-1">DATE</p>
-                      <p className="text-blue-900 font-semibold">
+                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Date</p>
+                      <p className="mt-1 font-medium text-slate-900">
                         {formatDate(request.appointmentDate)}
                       </p>
                     </div>
-
-                    {/* Time */}
-                    <div className="bg-blue-50 rounded-lg p-3">
-                      <p className="text-gray-600 text-xs font-medium mb-1">TIME</p>
-                      <p className="text-blue-900 font-semibold">
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Time</p>
+                      <p className="mt-1 font-medium text-slate-900">
                         {formatTime(request.appointmentTime)}
                       </p>
                     </div>
-
-                    {/* Reason */}
-                    <div className="bg-blue-50 rounded-lg p-3">
-                      <p className="text-gray-600 text-xs font-medium mb-1">REASON</p>
-                      <p className="text-blue-900 font-semibold">
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Reason</p>
+                      <p className="mt-1 font-medium text-slate-900">
                         {request.reason || "General Consultation"}
                       </p>
                     </div>
-
-                    {/* Status Detail */}
-                    <div className="bg-blue-50 rounded-lg p-3">
-                      <p className="text-gray-600 text-xs font-medium mb-1">PAYMENT STATUS</p>
-                      <p className="text-blue-900 font-semibold capitalize">
-                        {request.paymentStatus}
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">
+                        Payment Status
+                      </p>
+                      <p className="mt-1 font-medium capitalize text-slate-900">
+                        {request.paymentStatus || "unpaid"}
                       </p>
                     </div>
-
-                    {/* Created Date */}
-                    <div className="bg-blue-50 rounded-lg p-3">
-                      <p className="text-gray-600 text-xs font-medium mb-1">REQUESTED ON</p>
-                      <p className="text-blue-900 font-semibold">
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">
+                        Requested On
+                      </p>
+                      <p className="mt-1 font-medium text-slate-900">
                         {formatDate(request.createdAt)}
                       </p>
                     </div>
-
-                    {/* Request ID */}
-                    <div className="bg-blue-50 rounded-lg p-3">
-                      <p className="text-gray-600 text-xs font-medium mb-1">REQUEST ID</p>
-                      <p className="text-blue-900 font-semibold text-xs truncate">
-                        {request._id}
-                      </p>
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Request ID</p>
+                      <p className="mt-1 truncate font-mono text-xs text-slate-700">{request._id}</p>
                     </div>
                   </div>
 
-                  {/* Contact Info if Available */}
                   {request.doctorId?.contact && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <p className="text-sm text-gray-600">
-                        <span className="font-medium">Contact:</span> {request.doctorId.contact}
-                      </p>
-                    </div>
+                    <p className="mt-4 text-sm text-slate-600">
+                      <span className="font-medium text-slate-800">Doctor contact:</span>{" "}
+                      {request.doctorId.contact}
+                    </p>
                   )}
 
-                  {/* Actions */}
                   {request.approvalstatus === "PENDING" && (
-                    <div className="mt-4 flex gap-3">
-                      <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                        View Details
-                      </button>
+                    <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                      Request is pending review by the doctor.
                     </div>
                   )}
 
                   {request.approvalstatus === "APPROVED" && !request.consultationMode && (
-                    <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <p className="text-sm text-blue-900 font-medium mb-3">
-                        Doctor approved! Choose your consultation method:
+                    <div className="mt-5 rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+                      <p className="text-sm font-medium text-cyan-900">
+                        Approved. Choose a consultation method.
                       </p>
-                      <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="mt-3 flex flex-col gap-3 sm:flex-row">
                         <button
                           onClick={() => handleOfflineConsultation(request._id)}
                           disabled={processingConsultation[request._id]}
-                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors font-medium"
+                          className="flex-1 rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:bg-slate-400"
                         >
-                          {processingConsultation[request._id] ? "Processing..." : "Visit Clinic"}
+                          {processingConsultation[request._id]
+                            ? "Saving..."
+                            : "Visit Clinic"}
                         </button>
                         <button
                           onClick={() => handleOnlineConsultation(request._id)}
                           disabled={processingPayment[request._id]}
-                          className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors font-medium"
+                          className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400"
                         >
-                          {processingPayment[request._id] ? "Processing..." : "Pay & Start Chat"}
+                          {processingPayment[request._id]
+                            ? "Processing..."
+                            : "Pay and Start Chat"}
                         </button>
                       </div>
                     </div>
                   )}
 
-                  {request.approvalstatus === "APPROVED" && request.consultationMode === "offline" && (
-                    <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <p className="text-sm text-blue-900 font-medium">
-                        ✓ Offline consultation selected. Visit the clinic on your appointment date.
-                      </p>
-                    </div>
-                  )}
+                  {request.approvalstatus === "APPROVED" &&
+                    request.consultationMode === "offline" && (
+                      <div className="mt-5 rounded-xl border border-teal-200 bg-teal-50 p-3 text-sm text-teal-800">
+                        Offline consultation selected. Please visit the clinic on the
+                        appointment date.
+                      </div>
+                    )}
 
-                  {request.approvalstatus === "APPROVED" && request.consultationMode === "online" && request.paymentStatus !== "paid" && (
-                    <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <p className="text-sm text-yellow-900 font-medium mb-3">
-                        Payment required to start online consultation
-                      </p>
-                      <button
-                        onClick={() => handleOnlineConsultation(request._id)}
-                        disabled={processingPayment[request._id]}
-                        className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors font-medium"
-                      >
-                        {processingPayment[request._id] ? "Processing..." : "Proceed to Payment"}
-                      </button>
-                    </div>
-                  )}
+                  {request.approvalstatus === "APPROVED" &&
+                    request.consultationMode === "online" &&
+                    request.paymentStatus !== "paid" && (
+                      <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                        <p className="text-sm font-medium text-amber-900">
+                          Complete payment to start online consultation.
+                        </p>
+                        <button
+                          onClick={() => handleOnlineConsultation(request._id)}
+                          disabled={processingPayment[request._id]}
+                          className="mt-3 w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                        >
+                          {processingPayment[request._id]
+                            ? "Processing..."
+                            : "Proceed to Payment"}
+                        </button>
+                      </div>
+                    )}
 
-                  {request.approvalstatus === "APPROVED" && 
-                   request.consultationMode === "online" && 
-                   request.paymentStatus === "paid" && 
-                   request.isChatEnabled && (
-                    <div className="mt-4 flex gap-3">
-                      <button
-                        onClick={() => handleStartChat(request._id)}
-                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                      >
-                        💬 Start Chat with Doctor
-                      </button>
-                    </div>
-                  )}
-                </div>
+                  {request.approvalstatus === "APPROVED" &&
+                    request.consultationMode === "online" &&
+                    request.paymentStatus === "paid" &&
+                    request.isChatEnabled && (
+                      <div className="mt-5">
+                        <button
+                          onClick={() => handleStartChat(request._id)}
+                          className="w-full rounded-lg bg-cyan-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-cyan-800"
+                        >
+                          Start Chat with Doctor
+                        </button>
+                      </div>
+                    )}
+                </article>
               );
             })
           )}
-        </div>
-
-        {/* Summary Section */}
-        {filteredRequests.length > 0 && (
-          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 className="font-semibold text-blue-900 mb-2">Summary</h3>
-            <p className="text-gray-700">
-              You have{" "}
-              <span className="font-bold text-blue-600">{stats.pending}</span> pending
-              request(s),{" "}
-              <span className="font-bold text-green-600">{stats.approved}</span> approved
-              request(s), and{" "}
-              <span className="font-bold text-red-600">{stats.rejected}</span> rejected
-              request(s).
-            </p>
-          </div>
-        )}
+        </section>
       </div>
     </div>
   );

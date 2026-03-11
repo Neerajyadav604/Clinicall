@@ -5,6 +5,7 @@ const User = require("../models/User");
 const mailSender = require("../utils/mailSender");
 const appointmentapprovaltemplate = require("../mail/templates/appointmentapprovaltemplate");
 const appointmentrejectiontemplate = require("../mail/templates/appointmentrejectiontemplate");
+const { log: auditLog } = require('../middleware/auditLogger');
 
 // ============================================
 // DASHBOARD STATS
@@ -117,6 +118,9 @@ exports.approveDoctorRegistration = async (req, res) => {
       { new: true }
     ).populate("user");
 
+    // audit log
+    await auditLog(req.user.id, 'APPROVE_DOCTOR_REG', `registration:${registrationId}`, { adminRemarks });
+
     if (!registration) {
       return res.status(404).json({
         success: false,
@@ -149,6 +153,13 @@ exports.approveDoctorRegistration = async (req, res) => {
     } catch (doctorError) {
       console.error("Error creating doctor record:", doctorError);
       // Continue with email even if doctor creation fails
+    }
+
+    // Ensure user role is updated to doctor
+    try {
+      await User.findByIdAndUpdate(registration.user._id, { role: "doctor" });
+    } catch (userUpdateError) {
+      console.error("Error updating user role to doctor:", userUpdateError);
     }
 
     // Send approval email
@@ -194,6 +205,8 @@ exports.rejectDoctorRegistration = async (req, res) => {
       },
       { new: true }
     ).populate("user");
+
+    await auditLog(req.user.id, 'REJECT_DOCTOR_REG', `registration:${registrationId}`, { adminRemarks });
 
     if (!registration) {
       return res.status(404).json({
@@ -285,6 +298,8 @@ exports.approveAppointment = async (req, res) => {
       { approvalstatus: "APPROVED" },
       { new: true }
     )
+
+    await auditLog(req.user.id, 'APPROVE_APPOINTMENT', `appointment:${appointmentId}`)
       .populate("userId", "fullName email")
       .populate("doctorId", "fullName email");
 
@@ -330,6 +345,8 @@ exports.rejectAppointment = async (req, res) => {
   try {
     const { appointmentId } = req.params;
     const { reason } = req.body;
+
+    await auditLog(req.user.id, 'REJECT_APPOINTMENT', `appointment:${appointmentId}`, { reason });
 
     const appointment = await Appointment.findByIdAndUpdate(
       appointmentId,

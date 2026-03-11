@@ -5,7 +5,6 @@ import {
   User,
   Settings,
   LogOut,
-  ChevronDown,
   Bell,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -75,36 +74,20 @@ const ProfileDropDown = () => {
       {/* Profile Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex items-center justify-center w-10 h-10 rounded-full transition focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         {/* ✅ Profile Image or Initials */}
         {user?.image ? (
           <img
             src={user.image}
             alt={user.fullName}
-            className="w-8 h-8 rounded-full object-cover"
+            className="w-10 h-10 rounded-full object-cover"
           />
         ) : (
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs">
             {getInitials(user?.fullName)}
           </div>
         )}
-
-        {/* ✅ User Info */}
-        <div className="text-left hidden sm:block">
-          <div className="text-sm font-medium text-gray-700">
-            {user?.fullName || "User"}
-          </div>
-          <div className="text-xs text-gray-500">
-            {truncateEmail(user?.email)}
-          </div>
-        </div>
-
-        <ChevronDown
-          className={`w-4 h-4 text-gray-500 transition-transform ${
-            isOpen ? "rotate-180" : ""
-          }`}
-        />
       </button>
 
       {/* Dropdown */}

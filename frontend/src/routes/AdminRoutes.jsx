@@ -6,6 +6,7 @@ import Appointments from "../pages/admin/Appointments";
 import Users from "../pages/admin/Users";
 import ApprovedDoctors from "../pages/admin/ApprovedDoctors";
 import RejectedDoctors from "../pages/admin/RejectedDoctors";
+import Analytics from "../pages/admin/Analytics";
 
 const AdminRoutes = () => {
   return (
@@ -16,6 +17,7 @@ const AdminRoutes = () => {
       <Route path="/users" element={<Users />} />
       <Route path="/approved-doctors" element={<ApprovedDoctors />} />
       <Route path="/rejected-doctors" element={<RejectedDoctors />} />
+      <Route path="/analytics" element={<Analytics />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

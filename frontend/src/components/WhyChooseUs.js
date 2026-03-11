@@ -1,39 +1,104 @@
 import React from 'react';
-import { Heart, Shield, Clock, Users } from 'lucide-react';
+import { Heart, Shield, Clock, Users, Stethoscope } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { AuroraBackground } from './ui/aurora-background';
+import { BentoGrid, BentoCard } from './ui/bento-grid';
+
+const features = [
+  {
+    Icon: Heart,
+    name: "Expert Medical Care",
+    description: "Our experienced healthcare professionals deliver the highest quality medical care — personalised for you.",
+    href: "/appointment",
+    cta: "Book Now",
+    background: (
+      <img
+        src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&auto=format&fit=crop"
+        alt="Expert Care"
+        className="absolute inset-0 h-full w-full object-cover object-center"
+      />
+    ),
+    className: "lg:row-start-1 lg:row-end-4 lg:col-start-2 lg:col-end-3",
+  },
+  {
+    Icon: Shield,
+    name: "Trusted & Safe",
+    description: "We maintain the highest standards of safety, hygiene, and ethics to ensure your wellbeing at all times.",
+    href: "/aboutus",
+    cta: "Learn More",
+    background: (
+      <img
+        src="https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?w=800&auto=format&fit=crop"
+        alt="Trusted Service"
+        className="absolute inset-0 h-full w-full object-cover object-center"
+      />
+    ),
+    className: "lg:col-start-1 lg:col-end-2 lg:row-start-1 lg:row-end-3",
+  },
+  {
+    Icon: Clock,
+    name: "24/7 Availability",
+    description: "Round-the-clock medical support whenever you need it, giving you peace of mind at any hour.",
+    href: "/contact",
+    cta: "Contact Us",
+    background: (
+      <img
+        src="https://images.unsplash.com/photo-1584982751601-97dcc096659c?w=800&auto=format&fit=crop"
+        alt="24/7 Availability"
+        className="absolute inset-0 h-full w-full object-cover object-center"
+      />
+    ),
+    className: "lg:col-start-1 lg:col-end-2 lg:row-start-3 lg:row-end-4",
+  },
+  {
+    Icon: Users,
+    name: "Patient Focused",
+    description: "Your comfort and recovery are our top priority. Every patient treated with compassion and respect.",
+    href: "/appointment",
+    cta: "Book Appointment",
+    background: (
+      <img
+        src="https://images.unsplash.com/photo-1666214280391-8ff5bd3d9bf6?w=800&auto=format&fit=crop"
+        alt="Patient Focused"
+        className="absolute inset-0 h-full w-full object-cover object-center"
+      />
+    ),
+    className: "lg:col-start-3 lg:col-end-3 lg:row-start-1 lg:row-end-2",
+  },
+  {
+    Icon: Stethoscope,
+    name: "Advanced Technology",
+    description: "Get notified when your doctor is available, test results are out, or your appointment is confirmed.",
+    href: "/appointment",
+    cta: "Get Started",
+    background: (
+      <img
+        src="https://images.unsplash.com/photo-1530026405186-ed1f139313f8?w=800&auto=format&fit=crop"
+        alt="Advanced Technology"
+        className="absolute inset-0 h-full w-full object-cover object-center"
+      />
+    ),
+    className: "lg:col-start-3 lg:col-end-3 lg:row-start-2 lg:row-end-4",
+  },
+];
 
 const WhyChooseUs = () => {
-  const features = [
-    {
-      icon: Heart,
-      title: "Expert Care",
-      description: "Our team of experienced healthcare professionals is dedicated to providing you with the highest quality medical care."
-    },
-    {
-      icon: Shield,
-      title: "Trusted Service",
-      description: "We maintain the highest standards of safety and hygiene to ensure your wellbeing at all times."
-    },
-    {
-      icon: Clock,
-      title: "24/7 Availability",
-      description: "Round-the-clock medical support whenever you need it, ensuring peace of mind at all hours."
-    },
-    {
-      icon: Users,
-      title: "Patient Focused",
-      description: "Your comfort and recovery are our top priorities. We treat every patient with compassion and respect."
-    }
-  ];
-
   return (
-    <section className="bg-gradient-to-br from-gray-50 to-blue-50 py-12 sm:py-16 md:py-20 lg:py-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        <div className="text-center mb-12 sm:mb-16">
-          <p className="text-blue-500 text-sm sm:text-base font-medium mb-2">
+    <AuroraBackground className="py-20 sm:py-24 min-h-0 h-auto">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+
+        {/* Heading */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.2, duration: 0.8, ease: "easeInOut" }}
+          className="text-center mb-12 sm:mb-16"
+        >
+          <p className="text-blue-600 text-sm sm:text-base font-semibold uppercase tracking-widest mb-3">
             Why Choose Us
           </p>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-2">
             We Provide Quality
           </h2>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold">
@@ -41,36 +106,33 @@ const WhyChooseUs = () => {
             <span className="text-gray-900">Services</span>
           </h2>
           <p className="text-gray-600 text-base sm:text-lg mt-6 max-w-2xl mx-auto">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+            We are committed to delivering exceptional healthcare experiences with compassion, expertise, and cutting-edge technology.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-          {features.map((feature, index) => {
-            const Icon = feature.icon;
-            return (
-              <div
-                key={index}
-                className="bg-white rounded-2xl p-6 sm:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-2 border-transparent hover:border-blue-400 group"
-              >
-                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <Icon className="w-7 h-7 sm:w-8 sm:h-8 text-blue-500" />
-                </div>
-                
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3">
-                  {feature.title}
-                </h3>
-                
-                <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
-                  {feature.description}
-                </p>
-              </div>
-            );
-          })}
-        </div>
+        {/* Bento Grid Cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.35, duration: 0.8, ease: "easeInOut" }}
+        >
+          <BentoGrid className="lg:grid-rows-3">
+            {features.map((feature) => (
+              <BentoCard key={feature.name} {...feature} />
+            ))}
+          </BentoGrid>
+        </motion.div>
 
-        <div className="mt-12 sm:mt-16 text-center">
-          <div className="inline-flex items-center gap-4 bg-white rounded-full px-6 sm:px-8 py-3 sm:py-4 shadow-lg">
+        {/* Happy Patients Badge */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.6, duration: 0.7, ease: "easeInOut" }}
+          className="mt-12 sm:mt-16 text-center"
+        >
+          <div className="inline-flex items-center gap-4 bg-white/90 backdrop-blur-sm rounded-full px-6 sm:px-8 py-3 sm:py-4 shadow-lg">
             <div className="flex -space-x-3">
               {[1, 2, 3, 4].map((i) => (
                 <img
@@ -86,10 +148,10 @@ const WhyChooseUs = () => {
               <p className="text-xs sm:text-sm text-gray-600">Happy Patients</p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
       </div>
-    </section>
+    </AuroraBackground>
   );
 };
 

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { searchDoctors, requestAppointment } from "../services/operations/SearchApi";
-import Footer from "../components/Footer";
 
 const mapStatus = (s) => {
   if (!s) return "Book Appointment";
@@ -101,7 +100,7 @@ export default function DoctorSearch() {
           <h3 className="text-xl font-semibold text-gray-900">Find the right doctor</h3>
           <p className="mt-2 text-sm text-gray-500">Search by symptoms, specialty or doctor type — try one of these examples:</p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
-            {['heart doctor','skin specialist','pediatrician','dentist','ENT'].map((t) => (
+            {['heart doctor', 'skin specialist', 'pediatrician', 'dentist', 'ENT'].map((t) => (
               <button key={t} onClick={() => setQuery(t)} className="px-3 py-1.5 bg-gray-100 text-sm rounded-full hover:bg-gray-200">{t}</button>
             ))}
           </div>
@@ -117,7 +116,7 @@ export default function DoctorSearch() {
                 <img src={doc.image} alt={doc.fullName || 'doctor'} className="w-14 h-14 rounded-full object-cover" />
               ) : (
                 <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold text-gray-700">
-                  {((doc.fullName || 'U').split(' ').map(n => n[0]).slice(0,2).join(''))}
+                  {((doc.fullName || 'U').split(' ').map(n => n[0]).slice(0, 2).join(''))}
                 </div>
               )}
 

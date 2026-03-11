@@ -2,7 +2,16 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Stethoscope, AlertCircle, Video } from 'lucide-react';
 import doctorBg from '../assets/doctor-bg.jpg';
-import Footer from '../components/Footer';
+import { SiteFooter } from '../components/ui/site-footer';
+import { NAV_LINKS } from '../lib/nav-links';
+import { Facebook, Instagram, Twitter, Linkedin } from 'lucide-react';
+
+const socialLinks = [
+  { icon: Facebook, href: '#' },
+  { icon: Instagram, href: '#' },
+  { icon: Twitter, href: '#' },
+  { icon: Linkedin, href: '#' },
+];
 
 const AboutUs = () => {
   const services = [
@@ -25,26 +34,26 @@ const AboutUs = () => {
 
   return (
     <section className="min-h-screen bg-white mt-10">
-      
-      <div 
+
+      <div
         className="relative h-screen bg-cover bg-center bg-no-repeat"
         style={{
           backgroundImage: `url(${doctorBg})`,
         }}
       >
         <div className="absolute inset-0 bg-white/40"></div>
-        
+
         <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
           <div className="max-w-2xl">
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
               Making Health Care Better Together
             </h1>
-            
+
             <p className="text-base sm:text-lg text-gray-700 mb-8 leading-relaxed max-w-xl">
               Also you dry creeping beast multiply fourth abundantly our itself signs bring our. Won form living. Whose dry you seasons divide given gathering great in whose you'll greater let living form beast sinhere better together these place absolute right.
             </p>
 
-          
+
           </div>
         </div>
       </div>
@@ -78,7 +87,13 @@ const AboutUs = () => {
           </div>
         </div>
       </div>
-      <Footer />
+      <SiteFooter
+        logoText="Clinicall."
+        tagline="Quick medical services tailored for you."
+        navLinks={NAV_LINKS}
+        socialLinks={socialLinks}
+        copyrightText="© 2025 Clinicall. All rights reserved."
+      />
     </section>
   );
 };

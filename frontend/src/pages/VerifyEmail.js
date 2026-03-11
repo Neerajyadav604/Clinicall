@@ -23,18 +23,17 @@ function VerifyEmail() {
     e.preventDefault();
     if (!signupData) return;
 
-    const { role, fullName, contact, email, password, confirmPassword } =
-      signupData;
+    const { fullName, contact, email, password } = signupData;
     console.log("navigate:", navigate)
     dispatch(
       signup(
-        role,
+        "user",
         fullName,
         contact,
         email,
         password,
         otp,
-        navigate,
+        navigate
       )
     );
   };

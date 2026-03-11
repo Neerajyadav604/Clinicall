@@ -1,3 +1,5 @@
+import { handleUnauthorized } from "./authSession";
+
 // Admin API Service
 // This file contains all API calls for the admin panel
 
@@ -5,7 +7,8 @@ const BASE_URL = process.env.REACT_APP_BASE_URL || "http://localhost:4000/api/v1
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("token") || localStorage.getItem("token");
+  const token =
+    localStorage.getItem("adminToken") || localStorage.getItem("token");
   if (!token) {
     throw new Error("No authentication token found. Please login first.");
   }
@@ -20,6 +23,9 @@ const parseResponse = async (response) => {
   const contentType = response.headers.get("content-type");
   
   if (!response.ok) {
+    if (response.status === 401) {
+      handleUnauthorized();
+    }
     // Always expect JSON from our API
     const errorData = await response.json();
     const errorMessage = errorData.message || `HTTP Error ${response.status}`;
@@ -193,6 +199,34 @@ export const getUsers = async (role = null) => {
     console.error("Error fetching users:", error);
     throw error;
   }
+};
+
+// ============================================
+// ANALYTICS APIs
+// ============================================
+
+export const getAnalyticsOverview = async () => {
+  const response = await fetch(`${BASE_URL}/admin/analytics/overview`, { headers: getAuthHeaders() });
+  return await parseResponse(response);
+};
+
+export const getTrendData = async (period) => {
+  let url = `${BASE_URL}/admin/analytics/trends`;
+  if (period) url += `?period=${period}`;
+  const response = await fetch(url, { headers: getAuthHeaders() });
+  return await parseResponse(response);
+};
+
+export const getTopDoctors = async (limit) => {
+  let url = `${BASE_URL}/admin/analytics/top-doctors`;
+  if (limit) url += `?limit=${limit}`;
+  const response = await fetch(url, { headers: getAuthHeaders() });
+  return await parseResponse(response);
+};
+
+export const getConsultationRatio = async () => {
+  const response = await fetch(`${BASE_URL}/admin/analytics/consultation-ratio`, { headers: getAuthHeaders() });
+  return await parseResponse(response);
 };
 
 // ============================================

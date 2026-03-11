@@ -311,7 +311,7 @@ router.put("/profile/update", authenticateUser, isDoctor, async (req, res) => {
 
 /**
  * POST /api/v1/profile/update-image
- * Upload doctor's profile image
+ * Upload doctor's profile image using Cloudinary
  */
 router.post("/profile/update-image", authenticateUser, isDoctor, async (req, res) => {
   try {
@@ -344,7 +344,7 @@ router.post("/profile/update-image", authenticateUser, isDoctor, async (req, res
       });
     }
 
-    // Find doctor
+    // Find doctor by user ID
     let doctor = await Doctor.findOne({ user: userId });
 
     if (!doctor) {
@@ -354,14 +354,27 @@ router.post("/profile/update-image", authenticateUser, isDoctor, async (req, res
       });
     }
 
-    // Convert file to base64 or upload to cloud service
-    const base64Image = `data:${imageFile.mimetype};base64,${imageFile.data.toString("base64")}`;
-    doctor.image = base64Image;
+    // Upload to Cloudinary (FIXED: use Cloudinary instead of base64)
+    const { uploadImageToCloudinary } = require('../utils/ImageUploader');
+    const uploadedImage = await uploadImageToCloudinary(
+      imageFile,
+      process.env.FOLDER_NAME,
+      1000,
+      1000
+    );
 
-    // Save updated doctor
+    if (!uploadedImage || !uploadedImage.secure_url) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to upload image to Cloudinary",
+      });
+    }
+
+    // Save Cloudinary URL to doctor image field
+    doctor.image = uploadedImage.secure_url;
     doctor = await doctor.save();
 
-    // Populate user data
+    // Populate user data for complete response
     doctor = await Doctor.findById(doctor._id).populate("user", "fullName email contact role");
 
     return res.status(200).json({

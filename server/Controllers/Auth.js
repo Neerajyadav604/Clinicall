@@ -2,17 +2,18 @@ const User = require('../models/User')
 const OTP = require('../models/OTP')
 const bcrypt = require('bcrypt')
 const userProfile = require('../models/UserProfile')
-const jwt = require('jsonwebtoken')
 const otpGenerator = require('otp-generator')
+const { signAccessToken, signRefreshToken, verifyRefreshToken, revokeRefreshToken } = require('../utils/token');
+const { AppError } = require('../middleware/errorHandler');
 
 
 //create signup controller
 exports.signup = async (req, res) => {
   try {
-    const { fullName, email, contact, password, role, otp } = req.body;
+    const { fullName, email, contact, password, otp } = req.body;
     console.log("req body :",req.body)
 
-    if (!fullName || !email || !contact || !password || !role) {
+    if (!fullName || !email || !contact || !password) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
@@ -38,13 +39,13 @@ exports.signup = async (req, res) => {
     const hashedPassword = bcrypt.hashSync(password, 10);
 
     const newUser = await User.create({
-      role,
+      role: "user",
       fullName,
       email,
       contact,
       password: hashedPassword,
       additionalDetails: null,
-     
+      image: null, // initialize profile picture field
     });
 
     const profileDetails = await userProfile.create({
@@ -85,54 +86,68 @@ exports.signup = async (req, res) => {
 
 
 
-exports.login = async (req, res) => {
+exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-console.log("reqbody from login controller",req.body)
-    if (!email || !password)
-      return res.status(400).json({ success: false, message: "All fields are required" });
+    if (!email || !password) throw new AppError('All fields are required', 400);
 
-    // 1️⃣ Find the user
-    let user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ success: false, message: "User not registered" });
+    const user = await User.findOne({ email });
+    if (!user) throw new AppError('User not registered', 404);
 
-    // 2️⃣ Check password
+    // account lock check
+    if (user.lockUntil && user.lockUntil > Date.now()) {
+      throw new AppError('Account is locked due to multiple failed login attempts. Try later.', 403);
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid)
-      return res.status(401).json({ success: false, message: "Invalid email or password" });
+    if (!isPasswordValid) {
+      user.failedLoginAttempts += 1;
+      if (user.failedLoginAttempts >= 5) {
+        user.lockUntil = Date.now() + 2 * 60 * 60 * 1000; // 2 hours
+      }
+      await user.save();
+      throw new AppError('Invalid email or password', 401);
+    }
 
-    // 3️⃣ Populate based on role
-    if (user.role === "USER" || user.role === "ADMIN") {
-      await user.populate("additionalDetails");
-    } else if (user.role === "DOCTOR") {
+    // reset counters
+    user.failedLoginAttempts = 0;
+    user.lockUntil = undefined;
+    await user.save();
+
+    user.role = (user.role || "user").toLowerCase();
+    await user.save();
+
+    const normalizedRole = user.role;
+
+    // populate
+    if (normalizedRole === 'user' || normalizedRole === 'admin') {
+      await user.populate('additionalDetails');
+    } else if (normalizedRole === 'doctor') {
       await user.populate({
-        path: "doctorProfile",
-        populate: { path: "additionalDoctorDetails" }, // populate the DoctorProfile as well
+        path: 'doctorProfile',
+        populate: { path: 'additionalDoctorDetails' }
       });
     }
 
-    // 4️⃣ Generate JWT
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "24h" }
-    );
+    const accessToken = signAccessToken(user._id, normalizedRole);
+    const refreshTokenDoc = await signRefreshToken(user._id);
 
-    user.password = undefined; // hide password
-    user.token = token;
-
-    // 5️⃣ Set cookie & return
-    res.cookie("token", token, { httpOnly: true, expires: new Date(Date.now() + 24 * 60 * 60 * 1000) });
+    user.password = undefined;
+    res.cookie('refreshToken', refreshTokenDoc.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Strict',
+      expires: refreshTokenDoc.expiresAt
+    });
 
     return res.status(200).json({
       success: true,
-      message: "Login successful",
-      token,
-      user,
+      message: 'Login successful',
+      accessToken,
+      user
     });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ success: false, message: "Login failed. Try again later" });
+    next(err);
   }
 };
 
@@ -186,6 +201,41 @@ return res.status(500).json({
     }
 }
 
+
+exports.refresh = async (req, res, next) => {
+  try {
+    const token = req.cookies.refreshToken || req.body.refreshToken;
+    if (!token || typeof token !== 'string' || !token.trim()) {
+      return res.status(401).json({ success: false, message: 'Refresh token required' });
+    }
+
+    // basic JWT format check
+    const jwtPattern = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/;
+    if (!jwtPattern.test(token)) {
+      return res.status(401).json({ success: false, message: 'Malformed refresh token' });
+    }
+
+    const payload = await verifyRefreshToken(token);
+    const accessToken = signAccessToken(payload.id);
+    res.json({ success: true, accessToken });
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('Refresh token failure:', err.message);
+    }
+    return res.status(401).json({ success: false, message: 'Invalid refresh token' });
+  }
+};
+
+exports.logout = async (req, res, next) => {
+  try {
+    const token = req.cookies.refreshToken || req.body.refreshToken;
+    if (token) await revokeRefreshToken(token);
+    res.clearCookie('refreshToken');
+    res.json({ success: true, message: 'Logged out' });
+  } catch (err) {
+    next(err);
+  }
+};
 
 exports.changePassword = async (req, res) => {
   try {
@@ -286,16 +336,53 @@ console.log("Req.body :",req.body)
       });
     }
 
-    // 2. Check if already registered
-    const existingRegistration = await DoctorRegistration.findOne(
-      { email },
-    );
+    const userRole = (user?.role || "").toLowerCase();
+    if (userRole !== "user") {
+      return res.status(403).json({
+        success: false,
+        message: "Only users can apply for doctor registration",
+      });
+    }
+
+    // 2. Check if already registered for this user
+    const existingRegistration = await DoctorRegistration.findOne({
+      user: user.id,
+    }).sort({ createdAt: -1 });
 
     if (existingRegistration) {
-      return res.status(409).json({
-        success: false,
-        message: "Doctor already registered",
-      });
+      const status = existingRegistration.verificationStatus;
+      if (status === "PENDING" || status === "APPROVED") {
+        return res.status(409).json({
+          success: false,
+          message:
+            status === "PENDING"
+              ? "Doctor registration already under review"
+              : "Doctor registration already approved",
+        });
+      }
+
+      if (status === "REJECTED") {
+        existingRegistration.fullName = fullName;
+        existingRegistration.email = email;
+        existingRegistration.contact = contact;
+        existingRegistration.specialization = specialization;
+        existingRegistration.qualification = qualification;
+        existingRegistration.experienceYears = experienceYears;
+        existingRegistration.licenseNumber = licenseNumber;
+        existingRegistration.hospitalName = hospitalName;
+        existingRegistration.documents = documents;
+        existingRegistration.adminRemarks = adminRemarks;
+        existingRegistration.verificationStatus = "PENDING";
+        existingRegistration.reviewedAt = null;
+        existingRegistration.submittedAt = new Date();
+        await existingRegistration.save();
+
+        return res.status(200).json({
+          success: true,
+          message: "Doctor registration resubmitted for approval",
+          data: existingRegistration,
+        });
+      }
     }
 
     // 3. Create registration
@@ -325,6 +412,35 @@ console.log("Req.body :",req.body)
     return res.status(500).json({
       success: false,
       message: "Doctor registration failed",
+    });
+  }
+};
+
+exports.getDoctorRegistrationStatus = async (req, res) => {
+  try {
+    const registration = await DoctorRegistration.findOne({
+      user: req.user.id,
+    }).sort({ createdAt: -1 });
+
+    if (!registration) {
+      return res.status(200).json({
+        success: true,
+        data: { status: "NONE" },
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        status: registration.verificationStatus,
+        registrationId: registration._id,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch doctor registration status",
     });
   }
 };

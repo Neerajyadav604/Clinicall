@@ -30,7 +30,7 @@ const Users = () => {
 
   const getRoleBadge = (role) => {
     const styles = {
-      patient: "bg-blue-100 text-blue-800",
+      user: "bg-blue-100 text-blue-800",
       doctor: "bg-green-100 text-green-800",
       admin: "bg-purple-100 text-purple-800",
     };

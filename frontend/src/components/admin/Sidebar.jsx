@@ -10,6 +10,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       icon: <HiOutlineHome className="w-6 h-6" />,
     },
     {
+      name: "Analytics",
+      path: "/admin/analytics",
+      icon: <HiOutlineDocumentText className="w-6 h-6" />,
+    },
+    {
       name: "Doctor Registrations",
       path: "/admin/registrations",
       icon: <HiOutlineDocumentText className="w-6 h-6" />,

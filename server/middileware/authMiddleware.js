@@ -1,29 +1,37 @@
-const jwt = require("jsonwebtoken");
+const { verifyAccessToken } = require('../utils/token');
 const User = require("../models/User");
 const Doctor = require("../models/Doctor");
 
 const authenticateUser = async (req, res, next) => {
+  let token = null;
+
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    token = req.headers.authorization.split(" ")[1];
+  } else if (req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+  }
+
+  if (!token || typeof token !== 'string' || !token.trim()) {
+    return res.status(401).json({
+      success: false,
+      message: "No token provided. Please login.",
+    });
+  }
+
+  // simple structural check before calling jwt.verify
+  const jwtPattern = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/;
+  if (!jwtPattern.test(token)) {
+    return res.status(401).json({
+      success: false,
+      message: "Malformed token",
+    });
+  }
+
   try {
-    let token = null;
-
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith("Bearer")
-    ) {
-      token = req.headers.authorization.split(" ")[1];
-    } else if (req.cookies && req.cookies.token) {
-      token = req.cookies.token;
-    }
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: "No token provided. Please login.",
-      });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
+    const decoded = verifyAccessToken(token);
     const user = await User.findById(decoded.id);
     if (!user) {
       return res.status(401).json({
@@ -35,7 +43,11 @@ const authenticateUser = async (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
-    console.error(err);
+    // token was invalid/malformed/expired; this is expected for unauthenticated requests
+    // log only at debug level to keep the production log clean
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('JWT verification failure:', err.message);
+    }
     return res.status(401).json({
       success: false,
       message: "Authentication failed. Invalid token.",
@@ -52,7 +64,8 @@ const isadmin = (req, res, next) => {
       });
     }
 
-    if (req.user.role !== "ADMIN" && req.user.role !== "admin") {
+    const role = (req.user.role || "").toLowerCase();
+    if (role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Access denied. Admins only.",
@@ -82,7 +95,8 @@ const isDoctor = async (req, res, next) => {
       });
     }
 
-    if (req.user.role !== "DOCTOR") {
+    const role = (req.user.role || "").toLowerCase();
+    if (role !== "doctor") {
       return res.status(403).json({
         success: false,
         message: "Access denied. Doctor only."

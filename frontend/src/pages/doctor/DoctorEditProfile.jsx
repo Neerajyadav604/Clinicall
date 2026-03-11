@@ -164,17 +164,33 @@ const DoctorEditProfile = () => {
       };
 
       // Handle image upload separately if new image selected
-      let imageUrl = null;
+      let updatedProfile = { ...profile };
       if (formData.image) {
         try {
+          console.log("Uploading image...");
           const imageResponse = await uploadDoctorProfileImage(formData.image);
+          console.log("Image upload response:", imageResponse);
+          
           if (imageResponse.success && imageResponse.data?.image) {
-            imageUrl = imageResponse.data.image;
+            const imageUrl = imageResponse.data.image;
+            console.log("Image uploaded successfully:", imageUrl);
+            
+            // ✅ UPDATE PROFILE STATE IMMEDIATELY
+            updatedProfile.image = imageUrl;
+            setProfile(updatedProfile);
+            
+            // ✅ UPDATE IMAGE PREVIEW WITH CACHE BUSTING
+            setImagePreview(`${imageUrl}?t=${Date.now()}`);
+            
+            // Update form data for subsequent save
             updateData.image = imageUrl;
+          } else {
+            throw new Error(imageResponse.message || "Image upload failed");
           }
         } catch (imageError) {
-          console.log("Image upload skipped, continuing with profile update");
-          // Continue without image if upload fails
+          console.error("Image upload error:", imageError);
+          toast.error("Image upload failed: " + imageError.message);
+          return; // Stop if image upload fails
         }
       }
 

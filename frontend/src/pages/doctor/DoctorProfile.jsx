@@ -95,7 +95,7 @@ const DoctorProfile = () => {
                 <div className="w-32 h-32 bg-blue-100 rounded-lg border-4 border-white shadow-lg flex items-center justify-center text-blue-600 text-4xl font-bold">
                   {profile?.image ? (
                     <img
-                      src={profile.image}
+                      src={`${profile.image}?t=${Date.now()}`}
                       alt="Profile"
                       className="w-full h-full object-cover rounded-lg"
                     />

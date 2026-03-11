@@ -3,11 +3,13 @@ import { axiosInstance } from "../ApiConnector"
 import { authendpoint } from "../Api"
 import { toast } from "react-toastify"
 import { setUser } from "../../slices/ProfileSlice"
+import { initAuthSession, logout as logoutSession, startSessionTimers } from "../authSession"
 const {
     SEND_OTP_API,
     LOGIN_API,
     SIGNUP_API,
-    DOCTOR_REGISTRATION_API
+    DOCTOR_REGISTRATION_API,
+    DOCTOR_REGISTRATION_STATUS_API
 
 } = authendpoint
 
@@ -44,7 +46,7 @@ export function signup(role, fullName, contact, email, password, otp, navigate) 
 
     try {
       const response = await axiosInstance.post(SIGNUP_API, {
-        role,
+        role: (role || "user").toLowerCase(),
         fullName,
         contact,
         email,
@@ -89,21 +91,25 @@ export function login(email, password, navigate) {
             }
 
             toast.success("Login Successful")
-            dispatch(setToken(response.data.token))
+            // backend now returns accessToken rather than token
+            const accessToken = response.data.accessToken;
+            dispatch(setToken(accessToken))
            console.log(response.data.user);
 
       const data2 = dispatch(setUser( response.data.user  ))
       console.log(data2);
 
-            localStorage.setItem("token", response.data.token)
+            localStorage.setItem("token", accessToken)
             localStorage.setItem("user", JSON.stringify(response.data.user))
+            startSessionTimers(accessToken)
+            initAuthSession()
 
-            // Navigate based on user role
-            const userRole = response.data.user?.role || "user";
+      // Navigate based on user role
+      const userRole = (response.data.user?.role || "user").toLowerCase();
 
-            if (userRole === "ADMIN") {
+            if (userRole === "admin") {
                 navigate("/admin");
-            } else if (userRole === "DOCTOR") {
+            } else if (userRole === "doctor") {
                 navigate("/doctor");
             } else {
                 navigate("/my-profile");
@@ -125,14 +131,16 @@ export function logout(navigate) {
   return (dispatch) => {
     dispatch(setToken(null))
     dispatch(setUser(null))
-
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
-    toast.success("Logged Out")
-    navigate("/")
+    logoutSession({ reason: "manual", redirectTo: "/login" })
+    if (navigate) navigate("/login")
   }
 }
 
+
+export const getDoctorRegistrationStatus = async () => {
+  const response = await axiosInstance.get(DOCTOR_REGISTRATION_STATUS_API);
+  return response.data;
+};
 
 export function doctorRegistration(formData, token, navigate) {
 
@@ -141,6 +149,21 @@ export function doctorRegistration(formData, token, navigate) {
     dispatch(setLoading(true));
 
     try {
+      try {
+        const statusRes = await getDoctorRegistrationStatus();
+        const status = statusRes?.data?.status || statusRes?.status;
+        if (status === "PENDING" || status === "APPROVED") {
+          toast.error(
+            status === "PENDING"
+              ? "Your application is already under review."
+              : "You are already approved as a doctor."
+          );
+          return;
+        }
+      } catch (statusError) {
+        console.error("Doctor registration status check failed:", statusError);
+      }
+
       // Create FormData to handle file uploads
       const doctorFormData = new FormData();
 

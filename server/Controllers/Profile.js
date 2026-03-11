@@ -41,26 +41,44 @@ exports.getDoctorProfile = async (req, res) => {
 
 exports.getUserProfile = async (req, res) => {
   try {
-    const userId = req.user.id; // 👈 THIS is how
-    console.log(userId)
-    console.log("User ID from token:", userId);
-   
+    const userId = req.user.id;
 
+    // fetch profile along with base user document
+    const profileDoc = await userProfile
+      .findOne({ userId })
+      .populate(
+        "userId",
+        "fullName email contact role image createdAt updatedAt"
+      );
 
-   const profile = await userProfile.findOne({ userId });
+    if (!profileDoc) {
+      return res.status(404).json({
+        success: false,
+        message: "Profile not found",
+      });
+    }
 
-   
-    console.log(profile)
+    const userBase = profileDoc.userId.toObject
+      ? profileDoc.userId.toObject()
+      : profileDoc.userId;
 
-   return res.status(200).json({
+    const completeUser = {
+      ...userBase,
+      ...profileDoc._doc,
+      additionalDetails: profileDoc._doc,
+    };
+
+    return res.status(200).json({
       success: true,
-      userprofile:profile
+      user: completeUser,
     });
+
   } catch (error) {
-    console.log(error)
+    console.log("GET USER PROFILE ERROR:", error);
+
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch user profile"
+      message: "Failed to fetch user profile",
     });
   }
 };
@@ -220,8 +238,19 @@ console.log(updateData)
 
 exports.updateuserDisplayPicture = async (req, res) => {
   try {
+    console.log("\n=== DISPLAY PICTURE UPLOAD ===");
+    console.log("User from auth middleware:", req.user ? req.user._id : "MISSING");
+    console.log("Files received:", req.files ? Object.keys(req.files) : "NONE");
+    
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication failed - user not found in request"
+      });
+    }
+    
     const displayPicture = req.files.displayPicture;
-    const userId = req.user.id;
+    const userId = req.user._id; // extract from authenticated request
     
     const image = await uploadImageToCloudinary(
       displayPicture,

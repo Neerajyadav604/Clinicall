@@ -145,7 +145,7 @@ exports.deleteDoctor = async (req, res) => {
     console.log(id)
 
    
-    if (req.user.role !== "ADMIN") {
+    if ((req.user.role || "").toLowerCase() !== "admin") {
       return res.status(403).json({ success: false, message: "Not authorized" });
     }
 
@@ -163,7 +163,7 @@ exports.deleteDoctor = async (req, res) => {
 
     
     if (doctor.user) {
-      await User.findByIdAndUpdate(doctor.user, { role: "USER" });
+      await User.findByIdAndUpdate(doctor.user, { role: "user" });
     }
 
     

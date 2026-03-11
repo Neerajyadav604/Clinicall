@@ -1,8 +1,10 @@
 const express = require("express");
 const router = express.Router();
 
-const { signup, login, sendotp, doctorregistration } = require("../Controllers/Auth");
+const { signup, login, sendotp, doctorregistration, refresh, logout, getDoctorRegistrationStatus } = require("../Controllers/Auth");
 const { authenticateUser,isDoctor  } = require("../middileware/authMiddleware");
+const { loginLimiter, signupLimiter } = require('../middleware/rateLimiter');
+const { signupValidation, loginValidation } = require('../middleware/validation');
 
 
 
@@ -31,11 +33,14 @@ const { createOrder, verifyPayment } = require("../Controllers/Payment");
 router.post("/create-order", authenticateUser, createOrder);
 router.post("/verify-payment", authenticateUser, verifyPayment);
 
-router.post("/signup", signup);
-router.post("/login", login);
+router.post("/signup", signupLimiter, signupValidation, signup);
+router.post("/login", loginLimiter, loginValidation, login);
 router.post("/sendotp", sendotp);
+router.post('/refresh', refresh);
+router.post('/logout', authenticateUser, logout);
 
 router.post("/doctorregistration", authenticateUser, doctorregistration);
+router.get("/doctorregistration/status", authenticateUser, getDoctorRegistrationStatus);
 
 router.get("/userprofile", authenticateUser, getUserProfile);
 router.put("/edituserProfile", authenticateUser, updateUserProfile);

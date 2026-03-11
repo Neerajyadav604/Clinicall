@@ -51,4 +51,17 @@ ${userQuery}
   return JSON.parse(match[0]);
 }
 
-module.exports = { getDoctorSpecialties };
+
+// generic request helper used by other AI services
+async function request({ model, prompt, messages, options }) {
+  // if messages provided use them directly, otherwise wrap prompt in a user message
+  const msgArray = messages || [{ role: 'user', content: prompt }];
+  const response = await client.chat({
+    model,
+    messages: msgArray,
+    options: options || { temperature: 0.7 },
+  });
+  return response;
+}
+
+module.exports = { getDoctorSpecialties, request };

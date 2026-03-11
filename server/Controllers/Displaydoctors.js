@@ -1,4 +1,5 @@
 const { getDoctorSpecialties } = require('../services/phi3.service');
+const aiService = require('../services/ai.service');
 const Doctor = require('../models/Doctor');
 const Appointment = require('../models/Appointment');
 
@@ -29,11 +30,28 @@ exports.searchdoctors = async (req, res) => {
       return res.json({ success: true, doctors: [], aiResult });
     }
 
-    const doctors = await Doctor.find({
+    let doctors = await Doctor.find({
       specialization: { 
         $in: specialties.map(s => new RegExp(`^${s}$`, "i")) 
       }
     });
+
+    // if symptoms or analysis present, compute ranking
+    if (req.body.symptoms) {
+      const historyData = await Appointment.find({ user: userId }).sort({appointmentDate:-1}).limit(5);
+      const historyText = historyData.map(a=>a.reason||'').join('\n');
+      const analysis = await aiService.analyzeSymptoms(req.body.symptoms, historyText);
+      // reorder doctors by score if available
+      const ranked = analysis.doctors.map(d=>d.doctor._id.toString());
+      if (ranked.length) {
+        doctors.sort((a,b)=>{
+          const ai = ranked.indexOf(a._id.toString());
+          const bi = ranked.indexOf(b._id.toString());
+          return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+        });
+      }
+      res.locals.aiUrgency = analysis.urgency;
+    }
 
     const appointments = await Appointment.find({
       user: userId,
@@ -67,11 +85,10 @@ exports.searchdoctors = async (req, res) => {
       };
     });
 
-    res.json({
-      success: true,
-      doctors: doctorsWithStatus,
-      aiResult
-    });
+    const payload = { success: true, doctors: doctorsWithStatus };
+    if (res.locals.aiUrgency) payload.urgency = res.locals.aiUrgency;
+    if (aiResult) payload.aiResult = aiResult;
+    res.json(payload);
 
   } catch (err) {
     console.error(err);

@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { doctorRegistration } from "../services/operations/Authapi";
 import { toast } from "react-toastify";
-import Footer from "../components/Footer";
 
 const DoctorRegistrationPage = () => {
   const navigate = useNavigate();
@@ -270,11 +269,10 @@ const DoctorRegistrationPage = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`flex-1 px-6 py-4 font-semibold rounded-xl transition-all duration-300 shadow-lg ${
-                    loading
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-blue-500/30'
-                  } text-white`}
+                  className={`flex-1 px-6 py-4 font-semibold rounded-xl transition-all duration-300 shadow-lg ${loading
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-blue-500/30'
+                    } text-white`}
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -326,7 +324,6 @@ const DoctorRegistrationPage = () => {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 };

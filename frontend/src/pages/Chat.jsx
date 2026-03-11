@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { checkChatAccess } from "../services/operations/consultationApi";
 import { toast } from "react-toastify";
 import io from "socket.io-client";
+import { handleUnauthorized } from "../services/authSession";
 
 /**
  * MessageBubble Component
@@ -96,7 +97,7 @@ const MessageList = ({ messages, messagesEndRef }) => {
             <MessageBubble
               key={`${msg.timestamp}-${index}`}
               message={msg}
-              isOwnMessage={msg.senderRole === "USER"}
+              isOwnMessage={msg.senderRole?.toLowerCase() === "user"}
             />
           ))}
           <div ref={messagesEndRef} />
@@ -174,7 +175,7 @@ const ChatHeader = ({ appointmentDetails, isConnected }) => {
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-gray-900">
-            {appointmentDetails?.doctorName || "Doctor"}
+            {appointmentDetails?.doctorName || "doctor"}
           </h1>
           <p className="text-sm text-gray-600 mt-1">
             {appointmentDetails && (
@@ -259,7 +260,7 @@ const Chat = () => {
 
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `${process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api/v1"}/upload/chat-file`,
+        `${process.env.REACT_APP_API_BASE_URL || "http://192.168.137.202:4000/api/v1/api/v1"}/upload/chat-file`,
         {
           method: 'POST',
           headers: {
@@ -272,12 +273,16 @@ const Chat = () => {
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          handleUnauthorized();
+          return;
+        }
         throw new Error(data.message || "File upload failed");
       }
 
       // Send file message via socket
       const token_payload = JSON.parse(atob(token.split('.')[1]));
-      const userRole = token_payload.role || "USER";
+      const userRole = (token_payload.role || "user").toLowerCase();
 
       const fileMessageData = {
         appointmentId,
@@ -312,19 +317,19 @@ const Chat = () => {
         setLoading(true);
 
         const token = localStorage.getItem("token");
-        let userRole = "USER";
+        let userRole = "user";
 
         if (token) {
           try {
             const payload = JSON.parse(atob(token.split('.')[1]));
-            userRole = payload.role || "USER";
+            userRole = (payload.role || "user").toLowerCase();
           } catch (error) {
             console.error("Error parsing token:", error);
           }
         }
 
         let response;
-        if (userRole === "DOCTOR") {
+        if (userRole === "doctor") {
           const authHeaders = {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -341,6 +346,10 @@ const Chat = () => {
           response = await apiResponse.json();
 
           if (!apiResponse.ok) {
+            if (apiResponse.status === 401) {
+              handleUnauthorized();
+              return;
+            }
             throw new Error(response.message || "Failed to check chat access");
           }
         } else {
@@ -350,7 +359,7 @@ const Chat = () => {
         if (!response.canAccess) {
           setAccessDenied(true);
           toast.error(response.reason || "Chat access not available");
-          setTimeout(() => navigate(userRole === "DOCTOR" ? "/doctor/appointments" : "/my-requests"), 2000);
+          setTimeout(() => navigate(userRole === "doctor" ? "/doctor/appointments" : "/my-requests"), 2000);
           return;
         }
 
@@ -383,7 +392,7 @@ const Chat = () => {
             const messageExists = prev.some(msg =>
               msg.timestamp === data.timestamp &&
               msg.message === data.message &&
-              msg.senderRole === data.senderRole
+              msg.senderRole?.toLowerCase() === data.senderRole?.toLowerCase()
             );
             if (messageExists) {
               console.log("Duplicate message detected, skipping");
@@ -410,17 +419,17 @@ const Chat = () => {
         toast.error(error.message || "Failed to verify chat access");
 
         const token = localStorage.getItem("token");
-        let userRole = "USER";
+        let userRole = "user";
         if (token) {
           try {
             const payload = JSON.parse(atob(token.split('.')[1]));
-            userRole = payload.role || "USER";
+            userRole = (payload.role || "user").toLowerCase();
           } catch (e) {
             console.error("Token parse error:", e);
           }
         }
 
-        setTimeout(() => navigate(userRole === "DOCTOR" ? "/doctor/appointments" : "/my-requests"), 2000);
+        setTimeout(() => navigate(userRole === "doctor" ? "/doctor/appointments" : "/my-requests"), 2000);
       } finally {
         setLoading(false);
       }
@@ -448,12 +457,12 @@ const Chat = () => {
     }
 
     const token = localStorage.getItem("token");
-    let userRole = "USER";
+    let userRole = "user";
 
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        userRole = payload.role || "USER";
+        userRole = (payload.role || "user").toLowerCase();
       } catch (error) {
         console.error("Error parsing token:", error);
       }
@@ -483,11 +492,11 @@ const Chat = () => {
 
   if (accessDenied || !appointmentDetails) {
     const token = localStorage.getItem("token");
-    let userRole = "USER";
+    let userRole = "user";
     if (token) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        userRole = payload.role || "USER";
+        userRole = (payload.role || "user").toLowerCase();
       } catch (error) {
         console.error("Error parsing token:", error);
       }
@@ -507,7 +516,7 @@ const Chat = () => {
             onClick={() => navigate(userRole === "doctor" ? "/doctor/appointments" : "/my-requests")}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
           >
-            Back to {userRole === "DOCTOR" ? "Appointments" : "Requests"}
+            Back to {userRole === "doctor" ? "Appointments" : "Requests"}
           </button>
         </div>
       </div>
@@ -535,3 +544,5 @@ const Chat = () => {
 };
 
 export default Chat;
+
+

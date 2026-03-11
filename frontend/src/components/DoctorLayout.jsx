@@ -1,17 +1,27 @@
 import React, { useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { Sidebar, SidebarBody, SidebarLink } from "./ui/sidebar";
+import {
+  LayoutDashboard,
+  UserCog,
+  CalendarDays,
+  LogOut,
+  Stethoscope,
+  Bell,
+} from "lucide-react";
+import { motion } from "framer-motion";
+import { cn } from "../lib/utils";
 
 /**
  * DoctorLayout Component
  * Provides navigation and layout for all doctor dashboard pages
+ * Uses the animated Shadcn-style sidebar
  */
 const DoctorLayout = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Get doctor name from localStorage or token
   const getDoctorName = () => {
     try {
       const userData = localStorage.getItem("user");
@@ -20,7 +30,7 @@ const DoctorLayout = ({ children }) => {
         return user.fullName || "Doctor";
       }
       return "Doctor";
-    } catch (error) {
+    } catch {
       return "Doctor";
     }
   };
@@ -33,176 +43,120 @@ const DoctorLayout = ({ children }) => {
     navigate("/login");
   };
 
-  const isActive = (path) => {
-    return location.pathname === path ? "active" : "";
-  };
+  const links = [
+    {
+      label: "Dashboard",
+      href: "/doctor/dashboard",
+      icon: <LayoutDashboard className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+    },
+    {
+      label: "My Profile",
+      href: "/doctor/profile",
+      icon: <Stethoscope className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+    },
+    {
+      label: "Appointments",
+      href: "/doctor/appointments",
+      icon: <CalendarDays className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+    },
+    {
+      label: "Edit Profile",
+      href: "/doctor/edit-profile",
+      icon: <UserCog className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+    },
+  ];
+
+  const doctorName = getDoctorName();
+  const initials = doctorName.charAt(0).toUpperCase();
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    // Use min-h-[calc(100vh-96px)] so it fills the remaining screen below the 96px (pt-24) top navbar
+    <div className="flex flex-row w-full min-h-[calc(100vh-96px)] bg-gray-50 dark:bg-neutral-900">
       {/* Sidebar */}
-      <div
-        className={`${
-          sidebarOpen ? "w-64" : "w-20"
-        } bg-gradient-to-b from-blue-600 to-blue-800 text-white transition-all duration-300 ease-in-out flex flex-col shadow-lg`}
-      >
-        {/* Logo / Header */}
-        <div className="p-6 border-b border-blue-700 flex items-center justify-between">
-          {sidebarOpen && <h1 className="text-xl font-bold">ClinicAll</h1>}
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1 hover:bg-blue-700 rounded"
-            title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
-          </button>
-        </div>
+      <Sidebar open={open} setOpen={setOpen}>
+        <SidebarBody className="justify-between gap-10 min-h-[calc(100vh-96px)]">
+          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+            {/* Logo */}
+            {open ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="font-bold text-base text-neutral-800 dark:text-white flex items-center gap-2 py-1"
+              >
+                <div className="h-5 w-6 bg-blue-600 rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0" />
+                Clinicall Doctor
+              </motion.div>
+            ) : (
+              <div className="h-5 w-6 bg-blue-600 rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0" />
+            )}
 
-        {/* Navigation Menu */}
-        <nav className="flex-1 px-4 py-6 space-y-2">
-          <Link
-            to="/doctor/dashboard"
-            className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
-              isActive("/doctor/dashboard")
-                ? "bg-blue-700"
-                : "hover:bg-blue-700"
-            }`}
-            title="Dashboard"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 12l2-3m2 3l2-3m6 0l2 3m2-3l2 3m-9 3v6m0 0v3m0-3h3m0 0h3"
-              />
-            </svg>
-            {sidebarOpen && <span className="ml-4">Dashboard</span>}
-          </Link>
+            {/* Nav Links */}
+            <div className="mt-8 flex flex-col gap-2">
+              {links.map((link, idx) => (
+                <SidebarLink key={idx} link={link} />
+              ))}
+            </div>
+          </div>
 
-          <Link
-            to="/doctor/profile"
-            className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
-              isActive("/doctor/profile") ? "bg-blue-700" : "hover:bg-blue-700"
-            }`}
-            title="Profile"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          {/* Bottom: logout + user */}
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 group/sidebar py-2 text-red-500 hover:text-red-600 transition-colors"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-            {sidebarOpen && <span className="ml-4">Profile</span>}
-          </Link>
+              <LogOut className="h-5 w-5 flex-shrink-0" />
+              <motion.span
+                animate={{
+                  display: open ? "inline-block" : "none",
+                  opacity: open ? 1 : 0,
+                }}
+                className="text-sm whitespace-pre inline-block !p-0 !m-0"
+              >
+                Logout
+              </motion.span>
+            </button>
+            <SidebarLink
+              link={{
+                label: doctorName,
+                href: "/doctor/profile",
+                icon: (
+                  <div className="h-7 w-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                    {initials}
+                  </div>
+                ),
+              }}
+            />
+          </div>
+        </SidebarBody>
+      </Sidebar>
 
-          <Link
-            to="/doctor/appointments"
-            className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
-              isActive("/doctor/appointments")
-                ? "bg-blue-700"
-                : "hover:bg-blue-700"
-            }`}
-            title="Appointments"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-            {sidebarOpen && <span className="ml-4">Appointments</span>}
-          </Link>
-        </nav>
-
-        {/* Logout Button */}
-        <div className="p-4 border-t border-blue-700">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center px-4 py-3 rounded-lg bg-red-600 hover:bg-red-700 transition-colors justify-center"
-            title="Logout"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-            {sidebarOpen && <span className="ml-4">Logout</span>}
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        {/* Top Header */}
-        <div className="bg-white shadow-sm border-b border-gray-200">
-          <div className="px-8 py-4 flex items-center justify-between">
-            <h2 className="text-2xl font-semibold text-gray-800">
-              Welcome, {getDoctorName()}!
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Header Bar */}
+        <div className="bg-white dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-700 px-6 py-4 flex items-center justify-between flex-shrink-0">
+          <div>
+            <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+              Doctor Portal
             </h2>
-            <div className="flex items-center space-x-4">
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <svg
-                  className="w-6 h-6 text-gray-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                  />
-                </svg>
-              </button>
-              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                {getDoctorName().charAt(0).toUpperCase()}
+            <p className="text-sm text-gray-500">Welcome back, {doctorName}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="p-2 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-xl transition-colors">
+              <Bell className="w-5 h-5 text-gray-500 dark:text-gray-300" />
+            </button>
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md">
+                {initials}
               </div>
+              <span className="text-sm font-medium text-gray-700 dark:text-white hidden md:block">{doctorName}</span>
             </div>
           </div>
         </div>
 
-        {/* Page Content */}
-        <div className="p-8">{children}</div>
+        {/* Scrollable Page Content */}
+        <div className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-neutral-900">
+          {children}
+        </div>
       </div>
     </div>
   );
