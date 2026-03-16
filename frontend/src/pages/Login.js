@@ -76,7 +76,7 @@ const Login = () => {
     return !nextErrors.email && !nextErrors.password;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!validate()) {
@@ -84,13 +84,21 @@ const Login = () => {
       return;
     }
 
+    setErrors((prev) => ({ ...prev, submit: "" }));
+
     if (rememberMe) {
       localStorage.setItem(REMEMBER_EMAIL_KEY, formData.email.trim());
     } else {
       localStorage.removeItem(REMEMBER_EMAIL_KEY);
     }
 
-    dispatch(login(formData.email.trim(), formData.password, navigate));
+    const result = await dispatch(login(formData.email.trim(), formData.password, navigate));
+    if (result && result.success === false) {
+      setErrors((prev) => ({
+        ...prev,
+        submit: result.message || "Invalid email or password.",
+      }));
+    }
   };
 
   return (
@@ -114,7 +122,7 @@ const Login = () => {
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
             {errors.submit ? (
-              <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert" aria-live="polite">
+              <p className="error-box" role="alert" aria-live="polite">
                 {errors.submit}
               </p>
             ) : null}

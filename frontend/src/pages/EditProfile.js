@@ -103,6 +103,7 @@ const EditProfile = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const defaultValues = useMemo(() => buildDefaultValues(user), [user]);
 
@@ -117,6 +118,11 @@ const EditProfile = () => {
     defaultValues,
   });
 
+  const watchedValues = watch();
+  useEffect(() => {
+    if (submitError) setSubmitError("");
+  }, [watchedValues, submitError]);
+
   useEffect(() => {
     reset(defaultValues);
   }, [defaultValues, reset]);
@@ -129,6 +135,7 @@ const EditProfile = () => {
 
   const submitProfileForm = async (data) => {
     setIsSubmitting(true);
+    setSubmitError("");
     try {
       const payload = {
         ...data,
@@ -136,10 +143,17 @@ const EditProfile = () => {
         medications: toPayloadList(data.medications),
         medicalHistory: toPayloadList(data.medicalHistory),
       };
-      await dispatch(updateUserProfile(token, payload));
+      console.log("Submitting profile update with payload:", payload,token);
+      const result = await dispatch(updateUserProfile(token, payload));
+      console.log("Profile updated in Progress...")
+      if (result && result.success === false) {
+        setSubmitError(result.message || "Profile update failed.");
+        return;
+      }
       navigate("/my-profile");
     } catch (error) {
       console.error("Error updating profile:", error?.message || error);
+      setSubmitError("Profile update failed.");
     } finally {
       setIsSubmitting(false);
     }
@@ -189,6 +203,11 @@ const EditProfile = () => {
         </header>
 
         <form onSubmit={handleSubmit(submitProfileForm)} className="space-y-6">
+          {submitError ? (
+            <div className="error-box" role="alert" aria-live="polite">
+              {submitError}
+            </div>
+          ) : null}
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm">
             <button
               type="button"

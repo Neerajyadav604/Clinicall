@@ -4,7 +4,6 @@ import { toast } from "react-toastify";
 import {
   checkChatAccess,
   initiatePayment,
-  setConsultationMode,
   verifyPayment,
 } from "../services/operations/consultationApi";
 import {
@@ -47,7 +46,7 @@ const MyRequests = () => {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState({});
-  const [processingConsultation, setProcessingConsultation] = useState({});
+  const [paymentErrors, setPaymentErrors] = useState({});
   const [stats, setStats] = useState({
     total: 0,
     approved: 0,
@@ -118,30 +117,10 @@ const MyRequests = () => {
     );
   };
 
-  const handleOfflineConsultation = async (appointmentId) => {
-    try {
-      setProcessingConsultation((prev) => ({ ...prev, [appointmentId]: true }));
-      const response = await setConsultationMode(appointmentId, "offline");
-
-      if (response?.success) {
-        toast.success(
-          "Offline consultation selected. Visit the clinic on your appointment date."
-        );
-        updateRequest(appointmentId, {
-          consultationMode: "offline",
-          paymentStatus: "unpaid",
-        });
-      }
-    } catch (error) {
-      toast.error(error.message || "Failed to set offline consultation");
-    } finally {
-      setProcessingConsultation((prev) => ({ ...prev, [appointmentId]: false }));
-    }
-  };
-
   const handleOnlineConsultation = async (appointmentId) => {
     try {
       setProcessingPayment((prev) => ({ ...prev, [appointmentId]: true }));
+      setPaymentErrors((prev) => ({ ...prev, [appointmentId]: "" }));
       const paymentResponse = await initiatePayment(appointmentId);
 
       if (paymentResponse?.success && paymentResponse.key && paymentResponse.orderId) {
@@ -161,14 +140,17 @@ const MyRequests = () => {
               if (verifyResponse?.success) {
                 toast.success("Payment successful. Chat enabled.");
                 updateRequest(appointmentId, {
-                  consultationMode: "online",
                   paymentStatus: "paid",
+                  consultationStatus: "active",
                   isChatEnabled: true,
                 });
                 setTimeout(() => navigate(`/chat/${appointmentId}`), 1000);
               }
             } catch (error) {
-              toast.error(error.message || "Payment verification failed");
+              setPaymentErrors((prev) => ({
+                ...prev,
+                [appointmentId]: error.message || "Payment verification failed",
+              }));
             }
           },
           prefill: userPrefill,
@@ -178,10 +160,16 @@ const MyRequests = () => {
         const razorpay = new window.Razorpay(options);
         razorpay.open();
       } else {
-        toast.error("Failed to initiate payment");
+        setPaymentErrors((prev) => ({
+          ...prev,
+          [appointmentId]: "Failed to initiate payment",
+        }));
       }
     } catch (error) {
-      toast.error(error.message || "Failed to initiate payment");
+      setPaymentErrors((prev) => ({
+        ...prev,
+        [appointmentId]: error.message || "Failed to initiate payment",
+      }));
     } finally {
       setProcessingPayment((prev) => ({ ...prev, [appointmentId]: false }));
     }
@@ -226,7 +214,7 @@ const MyRequests = () => {
           <p className="text-xs uppercase tracking-[0.2em] text-cyan-100">Patient Portal</p>
           <h1 className="mt-2 text-3xl font-semibold md:text-4xl">My Requests</h1>
           <p className="mt-2 max-w-2xl text-sm text-cyan-100 md:text-base">
-            Track approvals, pick consultation mode, and continue eligible chats from one place.
+            Track approvals, complete payments, and start consultations from one place.
           </p>
         </header>
 
@@ -332,6 +320,14 @@ const MyRequests = () => {
                     </div>
                     <div className="rounded-xl bg-slate-50 p-3">
                       <p className="text-xs uppercase tracking-wide text-slate-500">
+                        Consultation Status
+                      </p>
+                      <p className="mt-1 font-medium capitalize text-slate-900">
+                        {request.consultationStatus || "locked"}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">
                         Requested On
                       </p>
                       <p className="mt-1 font-medium text-slate-900">
@@ -351,80 +347,98 @@ const MyRequests = () => {
                     </p>
                   )}
 
-                  {request.approvalstatus === "PENDING" && (
-                    <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                      Request is pending review by the doctor.
-                    </div>
-                  )}
+                  {(() => {
+                    const approvalStatus = request.approvalstatus;
+                    const paymentStatus = request.paymentStatus || "unpaid";
+                    const consultationStatus = request.consultationStatus || "locked";
 
-                  {request.approvalstatus === "APPROVED" && !request.consultationMode && (
-                    <div className="mt-5 rounded-xl border border-cyan-200 bg-cyan-50 p-4">
-                      <p className="text-sm font-medium text-cyan-900">
-                        Approved. Choose a consultation method.
-                      </p>
-                      <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-                        <button
-                          onClick={() => handleOfflineConsultation(request._id)}
-                          disabled={processingConsultation[request._id]}
-                          className="flex-1 rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:bg-slate-400"
-                        >
-                          {processingConsultation[request._id]
-                            ? "Saving..."
-                            : "Visit Clinic"}
-                        </button>
-                        <button
-                          onClick={() => handleOnlineConsultation(request._id)}
-                          disabled={processingPayment[request._id]}
-                          className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-                        >
-                          {processingPayment[request._id]
-                            ? "Processing..."
-                            : "Pay and Start Chat"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                    if (approvalStatus === "PENDING") {
+                      return (
+                        <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                          Awaiting doctor approval.
+                        </div>
+                      );
+                    }
 
-                  {request.approvalstatus === "APPROVED" &&
-                    request.consultationMode === "offline" && (
-                      <div className="mt-5 rounded-xl border border-teal-200 bg-teal-50 p-3 text-sm text-teal-800">
-                        Offline consultation selected. Please visit the clinic on the
-                        appointment date.
-                      </div>
-                    )}
+                    if (approvalStatus === "REJECTED") {
+                      return (
+                        <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+                          This request was rejected. You can submit a new request anytime.
+                        </div>
+                      );
+                    }
 
-                  {request.approvalstatus === "APPROVED" &&
-                    request.consultationMode === "online" &&
-                    request.paymentStatus !== "paid" && (
-                      <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                        <p className="text-sm font-medium text-amber-900">
-                          Complete payment to start online consultation.
-                        </p>
-                        <button
-                          onClick={() => handleOnlineConsultation(request._id)}
-                          disabled={processingPayment[request._id]}
-                          className="mt-3 w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-                        >
-                          {processingPayment[request._id]
-                            ? "Processing..."
-                            : "Proceed to Payment"}
-                        </button>
-                      </div>
-                    )}
+                    if (approvalStatus === "APPROVED" && paymentStatus !== "paid") {
+                      return (
+                        <div className="mt-5 rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+                          <p className="text-sm font-medium text-cyan-900">
+                            Approved. Complete payment to start your consultation.
+                          </p>
+                          <button
+                            onClick={() => handleOnlineConsultation(request._id)}
+                            disabled={processingPayment[request._id]}
+                            className="mt-3 w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                          >
+                            {processingPayment[request._id]
+                              ? "Processing..."
+                              : request.fee
+                                ? `Pay Rs ${request.fee}`
+                                : "Pay Now"}
+                          </button>
+                          {paymentErrors[request._id] ? (
+                            <div className="error-box mt-3" role="alert" aria-live="polite">
+                              {paymentErrors[request._id]}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    }
 
-                  {request.approvalstatus === "APPROVED" &&
-                    request.consultationMode === "online" &&
-                    request.paymentStatus === "paid" &&
-                    request.isChatEnabled && (
-                      <div className="mt-5">
-                        <button
-                          onClick={() => handleStartChat(request._id)}
-                          className="w-full rounded-lg bg-cyan-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-cyan-800"
-                        >
-                          Start Chat with Doctor
-                        </button>
-                      </div>
-                    )}
+                    if (consultationStatus === "completed") {
+                      return (
+                        <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                          <p className="text-sm font-medium text-emerald-900">
+                            Consultation completed. Your medical records are ready.
+                          </p>
+                          <button
+                            onClick={() => navigate("/medical-records")}
+                            className="mt-3 w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
+                          >
+                            View Medical Records
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    if (paymentStatus === "paid" && consultationStatus === "active") {
+                      return (
+                        <div className="mt-5 flex gap-3">
+                          <button
+                            onClick={() => navigate(`/consultation/${request._id}`)}
+                            className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
+                          >
+                            Start Live Consultation
+                          </button>
+                          <button
+                            onClick={() => handleStartChat(request._id)}
+                            className="flex-1 rounded-lg bg-cyan-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-cyan-800"
+                          >
+                            Open Chat
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    if (approvalStatus === "APPROVED") {
+                      return (
+                        <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                          Consultation is not active yet.
+                        </div>
+                      );
+                    }
+
+                    return null;
+                  })()}
                 </article>
               );
             })

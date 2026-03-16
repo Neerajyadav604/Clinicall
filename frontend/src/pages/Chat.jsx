@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { checkChatAccess } from "../services/operations/consultationApi";
 import { toast } from "react-toastify";
-import io from "socket.io-client";
+import socket from "../utils/socket";
 import { handleUnauthorized } from "../services/authSession";
 
 /**
@@ -111,7 +111,15 @@ const MessageList = ({ messages, messagesEndRef }) => {
  * ChatInput Component
  * Fixed input bar at the bottom with file upload support
  */
-const ChatInput = ({ messageInput, setMessageInput, handleSendMessage, handleFileUpload, isConnected }) => {
+const ChatInput = ({
+  messageInput,
+  setMessageInput,
+  handleSendMessage,
+  handleFileUpload,
+  isConnected,
+  error,
+  onClearError
+}) => {
   const fileInputRef = useRef(null);
 
   const handleFileSelect = (e) => {
@@ -129,7 +137,10 @@ const ChatInput = ({ messageInput, setMessageInput, handleSendMessage, handleFil
         <input
           type="text"
           value={messageInput}
-          onChange={(e) => setMessageInput(e.target.value)}
+          onChange={(e) => {
+            setMessageInput(e.target.value);
+            if (onClearError) onClearError();
+          }}
           placeholder="Type your message..."
           disabled={!isConnected}
           className="flex-1 px-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed transition-all duration-200"
@@ -161,6 +172,11 @@ const ChatInput = ({ messageInput, setMessageInput, handleSendMessage, handleFil
       {!isConnected && (
         <p className="text-sm text-red-600 mt-2 text-center">⚠️ Connection lost. Reconnecting...</p>
       )}
+      {error ? (
+        <div className="error-box mt-2" role="alert" aria-live="polite">
+          {error}
+        </div>
+      ) : null}
     </div>
   );
 };
@@ -213,9 +229,9 @@ const Chat = () => {
   const [appointmentDetails, setAppointmentDetails] = useState(null);
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
+  const [inputError, setInputError] = useState("");
   const [loading, setLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
-  const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const messagesEndRef = useRef(null);
   const socketInitialized = useRef(false);
@@ -231,22 +247,23 @@ const Chat = () => {
 
   // File upload handler
   const handleFileUpload = async (file) => {
-    if (!socket || !isConnected) {
-      toast.error("Cannot upload file - not connected");
+    setInputError("");
+    if (!socket.connected || !isConnected) {
+      setInputError("Cannot upload file - not connected");
       return;
     }
 
     // Validate file size (10MB limit)
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
-      toast.error("File size must be less than 10MB");
+      setInputError("File size must be less than 10MB");
       return;
     }
 
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
     if (!allowedTypes.includes(file.type)) {
-      toast.error("File type not supported. Please upload images, PDFs, or documents.");
+      setInputError("File type not supported. Please upload images, PDFs, or documents.");
       return;
     }
 
@@ -299,18 +316,29 @@ const Chat = () => {
 
     } catch (error) {
       console.error("File upload error:", error);
-      toast.error(error.message || "Failed to upload file");
+      setInputError(error.message || "Failed to upload file");
     }
   };
 
-  // Verify chat access and connect to socket
+  // Verify chat access and register socket listeners
+  // App.js manages global socket connection — we only verify access and register listeners
   useEffect(() => {
     if (socketInitialized.current) {
-      console.log("Socket already initialized, skipping");
+      console.log("Socket listeners already initialized, skipping");
       return;
     }
 
     socketInitialized.current = true;
+
+    let handleConnect;
+    let handleDisconnect;
+    let handleReceiveMessage;
+    let handleChatHistory;
+    let handleAppointmentAuthenticated;
+    let handleSocketError;
+    let connectionTimeout;
+    let connectHandler;
+    let isMounted = true;
 
     const verifyChatAccess = async () => {
       try {
@@ -357,63 +385,137 @@ const Chat = () => {
         }
 
         if (!response.canAccess) {
+          if (!isMounted) return;
           setAccessDenied(true);
           toast.error(response.reason || "Chat access not available");
           setTimeout(() => navigate(userRole === "doctor" ? "/doctor/appointments" : "/my-requests"), 2000);
           return;
         }
 
+        if (!isMounted) return;
         setAppointmentDetails(response.appointment);
 
-        const socketUrl = process.env.REACT_APP_SOCKET_URL || "http://localhost:4000";
-        const newSocket = io(socketUrl, {
-          auth: {
-            token: localStorage.getItem("token"),
-            appointmentId: appointmentId,
-          },
-        });
+        // Emit appointment auth to socket (it's already connected from App.js)
+        // This tells the server to authenticate THIS client for THIS appointment
+        const authPayload = {
+          token: localStorage.getItem("token"),
+          appointmentId: appointmentId,
+        };
 
-        newSocket.removeAllListeners();
+        // Register listeners first before checking connection state
+        registerChatListeners();
 
-        newSocket.on("connect", () => {
-          setIsConnected(true);
-          console.log("Connected to chat server");
-          newSocket.emit("join_chat", { appointmentId });
-        });
+        console.log('📍 [Chat] Socket state check:');
+        console.log('  - socket.connected:', socket.connected);
+        console.log('  - socket.connecting:', socket.connecting);
+        console.log('  - socket.disconnected:', socket.disconnected);
+        console.log('  - socket.auth:', socket.auth?.token ? 'token set' : 'no token');
 
-        newSocket.on("disconnect", () => {
-          setIsConnected(false);
-          console.log("Disconnected from chat server");
-        });
+        const attemptAuth = () => {
+          console.log('📡 [Chat] Emitting authenticate_appointment...');
+          if (isMounted) {
+            socket.emit('authenticate_appointment', authPayload);
+          }
+        };
 
-        newSocket.on("receive_message", (data) => {
-          console.log("Received message:", data);
-          setMessages((prev) => {
-            const messageExists = prev.some(msg =>
-              msg.timestamp === data.timestamp &&
-              msg.message === data.message &&
-              msg.senderRole?.toLowerCase() === data.senderRole?.toLowerCase()
-            );
-            if (messageExists) {
-              console.log("Duplicate message detected, skipping");
-              return prev;
+        if (socket.connected) {
+          console.log('✅ [Chat] Socket already connected, authenticating immediately');
+          attemptAuth();
+        } else if (socket.connecting) {
+          console.log('⏳ [Chat] Socket is currently connecting, waiting...');
+          connectHandler = () => {
+            console.log('📡 [Chat] Socket connected! Authenticating now...');
+            attemptAuth();
+            socket.off('connect', connectHandler);
+          };
+          socket.once('connect', connectHandler);
+        } else {
+          console.log('⚠️ [Chat] Socket is disconnected, attempting to reconnect first...');
+          // Force reconnect
+          socket.auth = { token: localStorage.getItem("token") };
+          socket.connect();
+          
+          connectHandler = () => {
+            console.log('📡 [Chat] Socket reconnected! Authenticating now...');
+            attemptAuth();
+            socket.off('connect', connectHandler);
+          };
+          socket.once('connect', connectHandler);
+        }
+
+        // Set timeout for connection failure
+        connectionTimeout = setTimeout(() => {
+          if (isMounted && !socket.connected) {
+            console.error('❌ [Chat] Socket failed to connect within 15 seconds');
+            setAccessDenied(true);
+            toast.error("Unable to establish connection. Please try again.");
+            navigate(userRole === "doctor" ? "/doctor/appointments" : "/my-requests");
+          }
+        }, 15000);
+
+        function registerChatListeners() {
+          console.log('📡 [Chat] Registering socket listeners');
+          
+          handleConnect = () => {
+            console.log("✅ Connected to chat server");
+            // Don't join chat yet - wait for appointment authentication
+          };
+
+          handleDisconnect = () => {
+            console.log("❌ Disconnected from chat server");
+            if (isMounted) setIsConnected(false);
+          };
+
+          handleReceiveMessage = (data) => {
+            console.log("Received message:", data);
+            if (isMounted) {
+              setMessages((prev) => {
+                const messageExists = prev.some(msg =>
+                  msg.timestamp === data.timestamp &&
+                  msg.message === data.message &&
+                  msg.senderRole?.toLowerCase() === data.senderRole?.toLowerCase()
+                );
+                if (messageExists) {
+                  console.log("Duplicate message detected, skipping");
+                  return prev;
+                }
+                return [...prev, data];
+              });
             }
-            return [...prev, data];
-          });
-        });
+          };
 
-        newSocket.on("chat_history", (history) => {
-          console.log("Received chat history:", history);
-          setMessages(history || []);
-        });
+          handleChatHistory = (history) => {
+            console.log("Received chat history:", history);
+            if (isMounted) setMessages(history || []);
+          };
 
-        newSocket.on("error", (error) => {
-          console.error("Socket error:", error);
-          toast.error("Connection error: " + error);
-        });
+          handleAppointmentAuthenticated = (data) => {
+            console.log("✅ [Chat] Appointment authenticated, joining chat room");
+            if (isMounted) {
+              if (connectionTimeout) clearTimeout(connectionTimeout);
+              setIsConnected(true);
+              // Now join the chat room
+              socket.emit("join_chat", { appointmentId });
+            }
+          };
 
-        setSocket(newSocket);
+          handleSocketError = (error) => {
+            console.error("Socket error:", error);
+            if (isMounted) {
+              setIsConnected(false);
+              toast.error("Connection error: " + error);
+            }
+          };
+
+          socket.on("connect", handleConnect);
+          socket.on("disconnect", handleDisconnect);
+          socket.on("receive_message", handleReceiveMessage);
+          socket.on("chat_history", handleChatHistory);
+          socket.on("appointment_authenticated", handleAppointmentAuthenticated);
+          socket.on("error", handleSocketError);
+        }
       } catch (error) {
+        if (!isMounted) return;
         console.error("Error verifying chat access:", error);
         setAccessDenied(true);
         toast.error(error.message || "Failed to verify chat access");
@@ -431,18 +533,24 @@ const Chat = () => {
 
         setTimeout(() => navigate(userRole === "doctor" ? "/doctor/appointments" : "/my-requests"), 2000);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     verifyChatAccess();
 
     return () => {
-      if (socket) {
-        console.log("Cleaning up socket connection");
-        socket.removeAllListeners();
-        socket.disconnect();
-      }
+      console.log("🧹 [Chat] Cleaning up socket listeners (NOT disconnecting)");
+      isMounted = false;
+      if (connectionTimeout) clearTimeout(connectionTimeout);
+      if (connectHandler) socket.off('connect', connectHandler);
+      if (handleConnect) socket.off("connect", handleConnect);
+      if (handleDisconnect) socket.off("disconnect", handleDisconnect);
+      if (handleReceiveMessage) socket.off("receive_message", handleReceiveMessage);
+      if (handleChatHistory) socket.off("chat_history", handleChatHistory);
+      if (handleAppointmentAuthenticated) socket.off("appointment_authenticated", handleAppointmentAuthenticated);
+      if (handleSocketError) socket.off("error", handleSocketError);
+      // ⚠️ DO NOT call socket.disconnect() — App.js manages the global connection
       socketInitialized.current = false;
     };
   }, [appointmentId]);
@@ -451,8 +559,8 @@ const Chat = () => {
   const handleSendMessage = (e) => {
     e.preventDefault();
 
-    if (!messageInput.trim() || !socket || !isConnected) {
-      toast.error("Cannot send message");
+    if (!messageInput.trim() || !socket.connected || !isConnected) {
+      setInputError("Cannot send message");
       return;
     }
 
@@ -476,6 +584,7 @@ const Chat = () => {
     };
 
     setMessageInput("");
+    setInputError("");
     socket.emit("send_message", messageData);
   };
 
@@ -538,6 +647,8 @@ const Chat = () => {
         handleSendMessage={handleSendMessage}
         handleFileUpload={handleFileUpload}
         isConnected={isConnected}
+        error={inputError}
+        onClearError={() => setInputError("")}
       />
     </div>
   );

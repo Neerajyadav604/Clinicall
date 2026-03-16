@@ -15,7 +15,6 @@ const DoctorRegistrationSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true,
       lowercase: true,
     },
     contact: {
@@ -62,9 +61,42 @@ const DoctorRegistrationSchema = new mongoose.Schema(
     reviewedAt: {
       type: Date,
     },
+
+    // ── HOSPITAL ASSOCIATION (optional)
+    hospital: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Hospital",
+      default: null,
+    },
+    hospitalName: { type: String, default: null },
+    hospitalStatus: {
+      type: String,
+      enum: ["pending_hospital", "approved_hospital", "rejected_hospital"],
+      default: "pending_hospital",
+    },
+    hospitalRejectionReason: { type: String, default: null },
+    hospitalReviewedAt:      { type: Date, default: null },
+    
+    // ── MULTI-ROLE SUPPORT
+    isHospitalOwnersApplication: {
+      type: Boolean,
+      default: false, // true if registrant owns the hospital they're registering with
+    },
+    autoApprovedByHospital: {
+      type: Boolean,
+      default: false, // true if hospital approval automatically granted (hospital owner scenario)
+    },
   },
   {
     timestamps: true, // adds createdAt & updatedAt automatically
+  }
+);
+
+DoctorRegistrationSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { verificationStatus: { $in: ["PENDING", "APPROVED"] } },
   }
 );
 

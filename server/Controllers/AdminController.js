@@ -2,10 +2,14 @@ const Appointment = require("../models/Appointment");
 const Doctor = require("../models/Doctor");
 const DoctorRegistration = require("../models/DoctorRegistration");
 const User = require("../models/User");
+const Payment = require("../models/Payment");
+const Hospital = require("../models/Hospital");
+const HospitalRegistration = require("../models/HospitalRegistration");
 const mailSender = require("../utils/mailSender");
 const appointmentapprovaltemplate = require("../mail/templates/appointmentapprovaltemplate");
 const appointmentrejectiontemplate = require("../mail/templates/appointmentrejectiontemplate");
 const { log: auditLog } = require('../middleware/auditLogger');
+const { sendNotification } = require("../utils/sendNotification");
 
 // ============================================
 // DASHBOARD STATS
@@ -21,7 +25,9 @@ exports.getDoctorsCount = async (req, res) => {
       count,
     });
   } catch (error) {
-    console.error("Error fetching doctors count:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Error fetching doctors count:", error);
+    }
     return res.status(500).json({
       success: false,
       message: "Failed to fetch doctors count",
@@ -40,7 +46,9 @@ exports.getPendingRegistrationsCount = async (req, res) => {
       count,
     });
   } catch (error) {
-    console.error("Error fetching pending registrations count:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Error fetching pending registrations count:", error);
+    }
     return res.status(500).json({
       success: false,
       message: "Failed to fetch pending registrations count",
@@ -62,10 +70,142 @@ exports.getAppointmentsCount = async (req, res) => {
       pendingCount,
     });
   } catch (error) {
-    console.error("Error fetching appointments count:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Error fetching appointments count:", error);
+    }
     return res.status(500).json({
       success: false,
       message: "Failed to fetch appointments count",
+      error: error.message,
+    });
+  }
+};
+
+// ============================================
+// OVERVIEW STATS
+// ============================================
+
+exports.getAdminStats = async (req, res) => {
+  try {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const [
+      totalUsers,
+      totalDoctors,
+      totalAppointments,
+      pendingRegistrations,
+      newUsersThisMonth,
+      appointmentsToday,
+      revenueAgg,
+      approvedRegs,
+      rejectedRegs,
+      responseAgg,
+      recentRegistrations,
+      recentAppointments,
+      totalHospitals,
+      totalClinics,
+      pendingEntityApplications,
+    ] = await Promise.all([
+      User.countDocuments({ $or: [{ roles: "user" }, { role: "user" }] }),
+      User.countDocuments({ $or: [{ roles: "doctor" }, { role: "doctor" }] }),
+      Appointment.countDocuments(),
+      DoctorRegistration.countDocuments({ verificationStatus: "PENDING" }),
+      User.countDocuments({ $or: [{ roles: "user" }, { role: "user" }], createdAt: { $gte: startOfMonth } }),
+      Appointment.countDocuments({ appointmentDate: { $gte: startOfDay, $lte: endOfDay } }),
+      Payment.aggregate([
+        { $match: { status: "paid" } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+      DoctorRegistration.countDocuments({ verificationStatus: "APPROVED" }),
+      DoctorRegistration.countDocuments({ verificationStatus: "REJECTED" }),
+      DoctorRegistration.aggregate([
+        { $match: { reviewedAt: { $ne: null } } },
+        { $project: { responseMs: { $subtract: ["$reviewedAt", "$submittedAt"] } } },
+        { $group: { _id: null, avgMs: { $avg: "$responseMs" } } },
+      ]),
+      DoctorRegistration.find()
+        .select("fullName email verificationStatus submittedAt")
+        .sort({ submittedAt: -1 })
+        .limit(5),
+      Appointment.find()
+        .select("approvalstatus appointmentDate appointmentTime createdAt")
+        .populate("userId", "fullName")
+        .populate("doctorId", "fullName")
+        .sort({ createdAt: -1 })
+        .limit(5),
+      Hospital.countDocuments({ status: "approved", isClinic: false }),
+      Hospital.countDocuments({ status: "approved", isClinic: true }),
+      HospitalRegistration.countDocuments({ status: "pending" }),
+    ]);
+
+    const totalRevenue = revenueAgg?.[0]?.total || 0;
+    const reviewedTotal = approvedRegs + rejectedRegs;
+    const approvalRate = reviewedTotal ? Math.round((approvedRegs / reviewedTotal) * 100) : 0;
+    const avgResponseHours = responseAgg?.[0]?.avgMs ? responseAgg[0].avgMs / (1000 * 60 * 60) : null;
+
+    const recentActivities = [
+      ...recentRegistrations.map((reg) => ({
+        type: "registration",
+        title:
+          reg.verificationStatus === "APPROVED"
+            ? "Doctor registration approved"
+            : reg.verificationStatus === "REJECTED"
+            ? "Doctor registration rejected"
+            : "New doctor registration",
+        detail: reg.fullName,
+        timestamp: reg.submittedAt,
+      })),
+      ...recentAppointments.map((apt) => ({
+        type: "appointment",
+        title:
+          apt.approvalstatus === "APPROVED"
+            ? "Appointment approved"
+            : apt.approvalstatus === "REJECTED"
+            ? "Appointment rejected"
+            : apt.approvalstatus === "CANCELLED"
+            ? "Appointment cancelled"
+            : "Appointment requested",
+        detail: `${apt.userId?.fullName || "Patient"} with ${apt.doctorId?.fullName || "Doctor"}`,
+        timestamp: apt.createdAt || apt.appointmentDate,
+      })),
+    ]
+      .filter((item) => item.timestamp)
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 5);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        totalUsers,
+        totalDoctors,
+        totalAppointments,
+        pendingRegistrations,
+        totalRevenue,
+        newUsersThisMonth,
+        appointmentsToday,
+        approvalRate,
+        avgResponseHours,
+        systemStatus: "operational",
+        recentActivities,
+        totalHospitals,
+        totalClinics,
+        pendingEntityApplications,
+      },
+    });
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Error fetching admin stats:", error);
+    }
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch admin stats",
       error: error.message,
     });
   }
@@ -94,7 +234,9 @@ exports.getDoctorRegistrations = async (req, res) => {
       data: registrations,
     });
   } catch (error) {
-    console.error("Error fetching doctor registrations:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Error fetching doctor registrations:", error);
+    }
     return res.status(500).json({
       success: false,
       message: "Failed to fetch doctor registrations",
@@ -128,6 +270,16 @@ exports.approveDoctorRegistration = async (req, res) => {
       });
     }
 
+    // Block approval if doctor applied to a hospital/clinic and it hasn't been approved yet
+    if (registration.hospital) {
+      if (registration.hospitalStatus !== "approved_hospital") {
+        return res.status(400).json({
+          success: false,
+          message: "This doctor has not been approved by the hospital/clinic yet.",
+        });
+      }
+    }
+
     // Create Doctor record from approved registration
     try {
       const existingDoctor = await Doctor.findOne({ user: registration.user._id });
@@ -145,21 +297,53 @@ exports.approveDoctorRegistration = async (req, res) => {
           hospitalName: registration.hospitalName,
           documents: registration.documents || [],
           verificationStatus: "APPROVED",
-          role: "doctor",
+          $or: [{ roles: "doctor" }, { role: "doctor" }],
         });
 
-        console.log("Doctor record created:", newDoctor._id);
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Doctor record created:", newDoctor._id);
+        }
+
+        // Add doctor to hospital if applicable
+        if (registration.hospital) {
+          try {
+            await Hospital.findByIdAndUpdate(
+              registration.hospital,
+              { $push: { doctors: newDoctor._id } }
+            );
+          } catch (hospErr) {
+            if (process.env.NODE_ENV === 'development') {
+              console.error("Error adding doctor to hospital:", hospErr);
+            }
+          }
+        }
       }
     } catch (doctorError) {
-      console.error("Error creating doctor record:", doctorError);
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Error creating doctor record:", doctorError);
+      }
       // Continue with email even if doctor creation fails
     }
 
-    // Ensure user role is updated to doctor
+    // Ensure user role is updated to doctor - keep both role and roles in sync
     try {
-      await User.findByIdAndUpdate(registration.user._id, { role: "doctor" });
+      const user = await User.findById(registration.user._id);
+      if (user) {
+        if (!Array.isArray(user.roles)) {
+          user.roles = [user.role || "user"];
+        }
+        if (!user.roles.includes("doctor")) {
+          user.roles.push("doctor");
+        }
+        // Keep the singular role field in sync (priority: admin > doctor > user)
+        const rolesPriority = ["admin", "hospital_admin", "doctor", "user"];
+        user.role = rolesPriority.find(r => user.roles.includes(r)) || "user";
+        await user.save();
+      }
     } catch (userUpdateError) {
-      console.error("Error updating user role to doctor:", userUpdateError);
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Error updating user role to doctor:", userUpdateError);
+      }
     }
 
     // Send approval email
@@ -173,7 +357,23 @@ exports.approveDoctorRegistration = async (req, res) => {
         )
       );
     } catch (emailError) {
-      console.error("Error sending approval email:", emailError);
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Error sending approval email:", emailError);
+      }
+    }
+
+    try {
+      await sendNotification({
+        recipient: registration.user._id,
+        type: "DOCTOR_APPROVED",
+        title: "Doctor Application Approved 🎉",
+        message:
+          "Congratulations! Your doctor registration has been approved. You can now access your doctor dashboard.",
+      });
+    } catch (notifyErr) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Failed to send approval notification:", notifyErr);
+      }
     }
 
     return res.status(200).json({
@@ -182,7 +382,9 @@ exports.approveDoctorRegistration = async (req, res) => {
       data: registration,
     });
   } catch (error) {
-    console.error("Error approving doctor registration:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Error approving doctor registration:", error);
+    }
     return res.status(500).json({
       success: false,
       message: "Failed to approve doctor registration",
@@ -223,7 +425,23 @@ exports.rejectDoctorRegistration = async (req, res) => {
         appointmentrejectiontemplate(registration.fullName, adminRemarks)
       );
     } catch (emailError) {
-      console.error("Error sending rejection email:", emailError);
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Error sending rejection email:", emailError);
+      }
+    }
+
+    try {
+      await sendNotification({
+        recipient: registration.user._id,
+        type: "DOCTOR_REJECTED",
+        title: "Doctor Application Rejected",
+        message:
+          "Your doctor registration was reviewed and rejected by admin. You may reapply with updated information.",
+      });
+    } catch (notifyErr) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Failed to send rejection notification:", notifyErr);
+      }
     }
 
     return res.status(200).json({
@@ -232,7 +450,9 @@ exports.rejectDoctorRegistration = async (req, res) => {
       data: registration,
     });
   } catch (error) {
-    console.error("Error rejecting doctor registration:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Error rejecting doctor registration:", error);
+    }
     return res.status(500).json({
       success: false,
       message: "Failed to reject doctor registration",
@@ -280,7 +500,9 @@ exports.getAllAppointments = async (req, res) => {
       data: formattedAppointments,
     });
   } catch (error) {
-    console.error("Error fetching appointments:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Error fetching appointments:", error);
+    }
     return res.status(500).json({
       success: false,
       message: "Failed to fetch appointments",
@@ -323,7 +545,24 @@ exports.approveAppointment = async (req, res) => {
         )
       );
     } catch (emailError) {
-      console.error("Error sending approval email:", emailError);
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Error sending approval email:", emailError);
+      }
+    }
+
+    try {
+      await sendNotification({
+        recipient: appointment.userId._id,
+        type: "APPOINTMENT_BOOKED",
+        title: "Appointment Confirmed ✅",
+        message: `Your appointment with Dr. ${appointment.doctorId.fullName} is confirmed for ${new Date(
+          appointment.appointmentDate
+        ).toLocaleDateString()} at ${appointment.appointmentTime}.`,
+      });
+    } catch (notifyErr) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Failed to send appointment approval notification:", notifyErr);
+      }
     }
 
     return res.status(200).json({
@@ -332,7 +571,9 @@ exports.approveAppointment = async (req, res) => {
       data: appointment,
     });
   } catch (error) {
-    console.error("Error approving appointment:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Error approving appointment:", error);
+    }
     return res.status(500).json({
       success: false,
       message: "Failed to approve appointment",
@@ -374,7 +615,24 @@ exports.rejectAppointment = async (req, res) => {
         appointmentrejectiontemplate(appointment.userId.fullName, reason)
       );
     } catch (emailError) {
-      console.error("Error sending rejection email:", emailError);
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Error sending rejection email:", emailError);
+      }
+    }
+
+    try {
+      await sendNotification({
+        recipient: appointment.userId._id,
+        type: "APPOINTMENT_CANCELLED",
+        title: "Appointment Cancelled",
+        message: `Your appointment with Dr. ${appointment.doctorId.fullName} on ${new Date(
+          appointment.appointmentDate
+        ).toLocaleDateString()} has been cancelled.`,
+      });
+    } catch (notifyErr) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Failed to send appointment cancellation notification:", notifyErr);
+      }
     }
 
     return res.status(200).json({
@@ -402,11 +660,12 @@ exports.getAllUsers = async (req, res) => {
 
     let query = {};
     if (role) {
-      query.role = role;
+      // Support both old (role) and new (roles array) schema
+      query.$or = [{ role: role }, { roles: role }];
     }
 
     const users = await User.find(query)
-      .select("fullName email contact role createdAt")
+      .select("fullName email contact role roles createdAt")
       .sort({ createdAt: -1 });
 
     return res.status(200).json({

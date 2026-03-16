@@ -26,43 +26,81 @@ const DoctorAppointments = () => {
 
   // Fetch appointments on component mount
   useEffect(() => {
+    console.log('[📋 DOCTOR APPOINTMENTS] Component mounted - fetching appointments');
     fetchAppointments();
   }, []);
 
   const fetchAppointments = async () => {
     try {
+      console.log('[📋 DOCTOR APPOINTMENTS] fetchAppointments called');
       setLoading(true);
+      console.log('[📋 DOCTOR APPOINTMENTS] Loading state set to true');
+      
+      console.log('[📋 DOCTOR APPOINTMENTS] Calling getDoctorAppointments()');
       const response = await getDoctorAppointments();
+      
+      console.log('[📋 DOCTOR APPOINTMENTS] ✅ getDoctorAppointments returned');
+      console.log('[📋 DOCTOR APPOINTMENTS] Response:', response);
+      
       const appointmentList = response.data || response || [];
-      setAppointments(Array.isArray(appointmentList) ? appointmentList : []);
+      console.log('[📋 DOCTOR APPOINTMENTS] Extracted appointment list:', appointmentList);
+      console.log('[📋 DOCTOR APPOINTMENTS] Appointment list length:', appointmentList.length);
+      
+      const validAppointments = Array.isArray(appointmentList) ? appointmentList : [];
+      console.log('[📋 DOCTOR APPOINTMENTS] Valid appointments count:', validAppointments.length);
+      
+      setAppointments(validAppointments);
+      console.log('[📋 DOCTOR APPOINTMENTS] Appointments state updated');
     } catch (error) {
-      console.error("Error fetching appointments:", error);
+      console.error("[📋 DOCTOR APPOINTMENTS] ❌ Error fetching appointments");
+      console.error("[📋 DOCTOR APPOINTMENTS] Error name:", error.name);
+      console.error("[📋 DOCTOR APPOINTMENTS] Error message:", error.message);
+      console.error("[📋 DOCTOR APPOINTMENTS] Error status:", error.response?.status);
+      console.error("[📋 DOCTOR APPOINTMENTS] Error response data:", error.response?.data);
+      console.error("[📋 DOCTOR APPOINTMENTS] Error stack:", error.stack);
+      console.error("[📋 DOCTOR APPOINTMENTS] Full error object:", error);
+      
       toast.error("Failed to load appointments");
       setAppointments([]);
     } finally {
       setLoading(false);
+      console.log('[📋 DOCTOR APPOINTMENTS] Loading state set to false');
     }
   };
 
   const handleApproveAppointment = async (appointmentId) => {
     try {
+      console.log('[📋 DOCTOR APPOINTMENTS] handleApproveAppointment called for:', appointmentId);
       setActionLoading(appointmentId);
-      await approveAppointment(appointmentId);
+      console.log('[📋 DOCTOR APPOINTMENTS] Action loading state set to:', appointmentId);
+      
+      console.log('[📋 DOCTOR APPOINTMENTS] Calling approveAppointment()');
+      const response = await approveAppointment(appointmentId);
+      console.log('[📋 DOCTOR APPOINTMENTS] ✅ Appointment approved');
+      console.log('[📋 DOCTOR APPOINTMENTS] Approval response:', response);
+      
       toast.success("Appointment approved successfully");
 
       // Update local state
-      setAppointments(
-        appointments.map((apt) =>
-          apt._id === appointmentId
-            ? { ...apt, approvalstatus: "APPROVED" }
-            : apt
-        )
+      const updatedAppointments = appointments.map((apt) =>
+        apt._id === appointmentId
+          ? { ...apt, approvalstatus: "APPROVED", paymentStatus: "unpaid", consultationStatus: "locked" }
+          : apt
       );
+      setAppointments(updatedAppointments);
+      console.log('[📋 DOCTOR APPOINTMENTS] Appointments state updated with new approval status');
     } catch (error) {
-      console.error("Error approving appointment:", error);
+      console.error("[📋 DOCTOR APPOINTMENTS] ❌ Error approving appointment");
+      console.error("[📋 DOCTOR APPOINTMENTS] Appointment ID:", appointmentId);
+      console.error("[📋 DOCTOR APPOINTMENTS] Error message:", error.message);
+      console.error("[📋 DOCTOR APPOINTMENTS] Error status:", error.response?.status);
+      console.error("[📋 DOCTOR APPOINTMENTS] Error data:", error.response?.data);
+      console.error("[📋 DOCTOR APPOINTMENTS] Error stack:", error.stack);
+      
       toast.error(error.message || "Failed to approve appointment");
     } finally {
       setActionLoading(null);
+      console.log('[📋 DOCTOR APPOINTMENTS] Action loading state cleared');
     }
   };
 
@@ -78,25 +116,43 @@ const DoctorAppointments = () => {
     const { appointmentId, reason } = rejectionModal;
 
     try {
+      console.log('[📋 DOCTOR APPOINTMENTS] handleConfirmReject called');
+      console.log('[📋 DOCTOR APPOINTMENTS] Appointment ID:', appointmentId);
+      console.log('[📋 DOCTOR APPOINTMENTS] Rejection reason:', reason);
+      
       setActionLoading(appointmentId);
-      await rejectAppointment(appointmentId, reason);
+      console.log('[📋 DOCTOR APPOINTMENTS] Action loading state set');
+      
+      console.log('[📋 DOCTOR APPOINTMENTS] Calling rejectAppointment()');
+      const response = await rejectAppointment(appointmentId, reason);
+      console.log('[📋 DOCTOR APPOINTMENTS] ✅ Appointment rejected');
+      console.log('[📋 DOCTOR APPOINTMENTS] Rejection response:', response);
+      
       toast.success("Appointment rejected successfully");
 
       // Update local state
-      setAppointments(
-        appointments.map((apt) =>
-          apt._id === appointmentId
-            ? { ...apt, approvalstatus: "REJECTED" }
-            : apt
-        )
+      const updatedAppointments = appointments.map((apt) =>
+        apt._id === appointmentId
+          ? { ...apt, approvalstatus: "REJECTED" }
+          : apt
       );
+      setAppointments(updatedAppointments);
+      console.log('[📋 DOCTOR APPOINTMENTS] Appointments state updated with rejection status');
 
       setRejectionModal({ open: false, appointmentId: null, reason: "" });
+      console.log('[📋 DOCTOR APPOINTMENTS] Rejection modal closed');
     } catch (error) {
-      console.error("Error rejecting appointment:", error);
+      console.error("[📋 DOCTOR APPOINTMENTS] ❌ Error rejecting appointment");
+      console.error("[📋 DOCTOR APPOINTMENTS] Appointment ID:", appointmentId);
+      console.error("[📋 DOCTOR APPOINTMENTS] Error message:", error.message);
+      console.error("[📋 DOCTOR APPOINTMENTS] Error status:", error.response?.status);
+      console.error("[📋 DOCTOR APPOINTMENTS] Error data:", error.response?.data);
+      console.error("[📋 DOCTOR APPOINTMENTS] Error stack:", error.stack);
+      
       toast.error(error.message || "Failed to reject appointment");
     } finally {
       setActionLoading(null);
+      console.log('[📋 DOCTOR APPOINTMENTS] Action loading state cleared');
     }
   };
 
@@ -220,11 +276,24 @@ const DoctorAppointments = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {filteredAppointments.map((appointment) => (
-              <div
-                key={appointment._id}
-                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
-              >
+            {filteredAppointments.map((appointment) => {
+              const consultationActive =
+                appointment.paymentStatus === "paid" &&
+                appointment.consultationStatus === "active";
+
+              const chatButtonClass = consultationActive
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-slate-300 text-slate-600 cursor-not-allowed";
+
+              const notesButtonClass = consultationActive
+                ? "bg-cyan-600 text-white hover:bg-cyan-700"
+                : "bg-slate-300 text-slate-600 cursor-not-allowed";
+
+              return (
+                <div
+                  key={appointment._id}
+                  className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+                >
                 {/* Card Header */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-600 px-6 py-4">
                   <div className="flex items-start justify-between">
@@ -372,22 +441,56 @@ const DoctorAppointments = () => {
                   ) : appointment.approvalstatus?.toUpperCase() === "APPROVED" ? (
                     <div className="flex gap-3">
                       <button
+                        onClick={() => navigate(`/consultation/${appointment._id}`)}
+                        disabled={!consultationActive}
+                        title={
+                          consultationActive
+                            ? "Start live consultation"
+                            : "Available after payment is confirmed"
+                        }
+                        className={`flex-1 px-4 py-2 rounded-lg transition-colors font-medium flex items-center justify-center ${
+                          consultationActive
+                            ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                            : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="currentColor">
+                          <path d="M18 9.5a8 8 0 11-16 0 8 8 0 0116 0z" />
+                          <path d="M9 9a3 3 0 100-6 3 3 0 000 6zm0 6a6 6 0 016-6H7a6 6 0 016 6v1H9v-1z" />
+                        </svg>
+                        {consultationActive ? "Live Consultation" : "Locked"}
+                      </button>
+                      <button
                         onClick={() => navigate(`/doctor/chat/${appointment._id}`)}
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center"
+                        disabled={!consultationActive}
+                        title={
+                          consultationActive
+                            ? "Start chat"
+                            : "Available after payment is confirmed"
+                        }
+                        className={`flex-1 px-4 py-2 rounded-lg transition-colors font-medium flex items-center justify-center ${chatButtonClass}`}
                       >
                         <svg className="w-4 h-4 mr-2" fill="currentColor">
                           <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
                           <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
                         </svg>
-                        Start Chat
+                        {consultationActive ? "Chat" : "Chat Locked"}
                       </button>
-                      <div className="flex-1 text-center py-2">
-                        <p className="text-sm text-gray-600">
-                          Status: <span className="font-semibold text-green-600">
-                            {appointment.approvalstatus}
-                          </span>
-                        </p>
-                      </div>
+                      <button
+                        onClick={() => navigate(`/doctor/clinical-notes/${appointment._id}`)}
+                        disabled={!consultationActive}
+                        title={
+                          consultationActive
+                            ? "Open clinical notes"
+                            : "Available after payment is confirmed"
+                        }
+                        className={`flex-1 px-4 py-2 rounded-lg transition-colors font-medium flex items-center justify-center ${notesButtonClass}`}
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="currentColor">
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                        {consultationActive ? "Clinical Notes" : "Locked"}
+                      </button>
                     </div>
                   ) : (
                     <div className="text-center py-2">
@@ -400,7 +503,7 @@ const DoctorAppointments = () => {
                   )}
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import AdminLayout from "./AdminLayout";
 import TableComponent from "../../components/admin/TableComponent";
 import ActionModal from "../../components/admin/ActionModal";
 import { HiOutlineEye, HiOutlineCheck, HiOutlineX } from "react-icons/hi";
@@ -24,15 +23,15 @@ const DoctorRegistrations = () => {
   useEffect(() => {
     fetchRegistrations();
   }, [filteredStatus]);
-console.log("hii")
+// Removed debug log
   const fetchRegistrations = async () => {
     try {
-      console.log("hii444")
+      // Debug removed
 
       setLoading(true);
       setError(null);
       const data = await getDoctorRegistrations(filteredStatus);
-      console.log("data :",data)
+      // Data logging removed
       setRegistrations(data.data || []);
     } catch (err) {
       console.error("Error fetching registrations:", err);
@@ -129,8 +128,7 @@ console.log("hii")
   ];
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -159,24 +157,23 @@ console.log("hii")
 
         {/* Table */}
         <TableComponent columns={columns} data={registrations} loading={loading} />
-      </div>
 
-      {/* Modal */}
-      {selectedDoctor && (
-        <ActionModal
-          isOpen={modalOpen}
-          onClose={() => {
-            setModalOpen(false);
-            setSelectedDoctor(null);
-          }}
-          doctor={selectedDoctor}
-          type={modalType}
-          onApprove={handleApprove}
-          onReject={handleReject}
-          loading={actionLoading}
-        />
-      )}
-    </AdminLayout>
+        {/* Modal */}
+        {selectedDoctor && (
+          <ActionModal
+            isOpen={modalOpen}
+            onClose={() => {
+              setModalOpen(false);
+              setSelectedDoctor(null);
+            }}
+            doctor={selectedDoctor}
+            type={modalType}
+            onApprove={handleApprove}
+            onReject={handleReject}
+            loading={actionLoading}
+          />
+        )}
+      </div>
   );
 };
 

@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const { signup, login, sendotp, doctorregistration, refresh, logout, getDoctorRegistrationStatus } = require("../Controllers/Auth");
-const { authenticateUser,isDoctor  } = require("../middileware/authMiddleware");
+const { authenticateUser,isDoctor  } = require("../middleware/authMiddleware");
 const { loginLimiter, signupLimiter } = require('../middleware/rateLimiter');
 const { signupValidation, loginValidation } = require('../middleware/validation');
 
@@ -41,6 +41,7 @@ router.post('/logout', authenticateUser, logout);
 
 router.post("/doctorregistration", authenticateUser, doctorregistration);
 router.get("/doctorregistration/status", authenticateUser, getDoctorRegistrationStatus);
+router.get("/doctor-registration/status", authenticateUser, getDoctorRegistrationStatus);
 
 router.get("/userprofile", authenticateUser, getUserProfile);
 router.put("/edituserProfile", authenticateUser, updateUserProfile);

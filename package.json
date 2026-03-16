@@ -1,0 +1,37 @@
+{
+  "name": "clinicall-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:e2e": "npx playwright test tests/Userprofileedittest.spec.ts",
+    "test:e2e:headed": "npx playwright test tests/Userprofileedittest.spec.ts --headed",
+    "test:e2e:debug": "npx playwright test tests/Userprofileedittest.spec.ts --debug",
+    "test:e2e:profile": "npx playwright test tests/Userprofileedittest.spec.ts -g 'User Profile Edit Flow'",
+    "test:e2e:auth": "npx playwright test tests/Userprofileedittest.spec.ts -g 'Authentication'",
+    "test:e2e:form": "npx playwright test tests/Userprofileedittest.spec.ts -g 'Form'",
+    "test:e2e:chromium": "npx playwright test tests/Userprofileedittest.spec.ts --project=chromium",
+    "test:e2e:firefox": "npx playwright test tests/Userprofileedittest.spec.ts --project=firefox",
+    "test:e2e:webkit": "npx playwright test tests/Userprofileedittest.spec.ts --project=webkit",
+    "test:e2e:mobile": "npx playwright test tests/Userprofileedittest.spec.ts --project='Mobile Chrome'",
+    "test:e2e:report": "npx playwright show-report",
+    "test:e2e:watch": "npx playwright test tests/Userprofileedittest.spec.ts --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Neerajyadav604/Clinicall.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Neerajyadav604/Clinicall/issues"
+  },
+  "homepage": "https://github.com/Neerajyadav604/Clinicall#readme",
+  "description": "",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "playwright": "^1.58.2"
+  }
+}

@@ -90,35 +90,60 @@ export const refreshSession = async () => {
   try {
     const baseUrl =
       process.env.REACT_APP_BASE_URL || "http://localhost:4000/api/v1";
+    
     const response = await axios.post(
       `${baseUrl}${authendpoint.REFRESH_API}`,
-      {},
+      {}, // Refresh token comes from cookies with withCredentials: true
       { withCredentials: true }
     );
+    
     const accessToken = response?.data?.accessToken;
     if (!accessToken) {
       throw new Error("No access token returned from refresh");
     }
+    
     localStorage.setItem("token", accessToken);
     store.dispatch(setToken(accessToken));
     startSessionTimers(accessToken);
     toast.dismiss(WARNING_TOAST_ID);
-    toast.success("Session extended");
+    toast.success("Session extended successfully");
     return accessToken;
   } catch (error) {
-    handleUnauthorized();
+    console.error("Session refresh failed:", error.message);
+    // Show error message instead of auto-logout
+    toast.dismiss(WARNING_TOAST_ID);
+    toast.error(
+      <div className="flex items-center gap-2">
+        <span>Session refresh failed. Please log in again.</span>
+      </div>,
+      { toastId: "refresh-error", autoClose: 5000 }
+    );
+    // Give user a moment before logout
+    setTimeout(() => {
+      handleUnauthorized();
+    }, 2000);
     throw error;
   }
 };
 
 const showExpiryWarning = () => {
   if (toast.isActive(WARNING_TOAST_ID)) return;
+  
+  const handleRefreshClick = async () => {
+    try {
+      await refreshSession();
+    } catch (error) {
+      // Error already handled in refreshSession() - don't do anything else here
+      console.error("Refresh attempt failed:", error.message);
+    }
+  };
+  
   toast.info(
     <div className="flex items-center gap-3">
       <span>Your session is about to expire. Stay logged in?</span>
       <button
         className="rounded-md bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700"
-        onClick={() => refreshSession()}
+        onClick={handleRefreshClick}
       >
         Stay Logged In
       </button>

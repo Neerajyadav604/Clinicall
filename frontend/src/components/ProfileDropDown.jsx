@@ -45,6 +45,8 @@ const ProfileDropDown = () => {
       return "/admin";
     } else if (userRole === "doctor") {
       return "/doctor";
+    } else if (userRole === "hospital_admin") {
+      return "/hospital-admin";
     }
 
     return "/my-profile";
@@ -92,7 +94,7 @@ const ProfileDropDown = () => {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+        <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-[9999] max-h-[calc(100vh-80px)] overflow-y-auto">
           {/* ✅ User Info Header (visible on mobile) */}
           <div className="sm:hidden px-4 py-3 border-b border-gray-200">
             <div className="flex items-center gap-3">

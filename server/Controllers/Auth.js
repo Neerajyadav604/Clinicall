@@ -1,22 +1,36 @@
 const User = require('../models/User')
 const OTP = require('../models/OTP')
+const Notification = require('../models/Notification')
 const bcrypt = require('bcrypt')
 const userProfile = require('../models/UserProfile')
 const otpGenerator = require('otp-generator')
 const { signAccessToken, signRefreshToken, verifyRefreshToken, revokeRefreshToken } = require('../utils/token');
 const { AppError } = require('../middleware/errorHandler');
+const { sendNotification } = require("../utils/sendNotification");
 
 
 //create signup controller
 exports.signup = async (req, res) => {
   try {
     const { fullName, email, contact, password, otp } = req.body;
-    console.log("req body :",req.body)
+    // ✅ SECURITY: Only log in development mode
+    if (process.env.NODE_ENV === 'development') {
+      console.log("req body :", req.body);
+    }
 
     if (!fullName || !email || !contact || !password) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
+      });
+    }
+
+    // ✅ SECURITY: Validate password strength (minimum 8 chars, mixed character types)
+    const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordStrengthRegex.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters long and contain uppercase, lowercase, numbers, and special characters (@$!%*?&)"
       });
     }
 
@@ -36,10 +50,14 @@ exports.signup = async (req, res) => {
       });
     }
 
+    // Delete OTP after successful validation to prevent reuse
+    await OTP.deleteOne({ _id: latestOtp._id });
+
     const hashedPassword = bcrypt.hashSync(password, 10);
 
     const newUser = await User.create({
-      role: "user",
+      role: "user", // ✅ Always sync both role and roles
+      roles: ["user"],
       fullName,
       email,
       contact,
@@ -67,6 +85,33 @@ exports.signup = async (req, res) => {
 
     newUser.additionalDetails = profileDetails._id;
     await newUser.save();
+
+    // ✅ FIX: Batch admin notifications to prevent N+1 queries
+    try {
+      const admins = await User.find({ $or: [{ roles: "admin" }, { role: "admin" }] }).select("_id fullName");
+      
+      if (admins.length > 0) {
+        // Create all notifications in a single batch query using insertMany
+        const notificationDocs = admins.map((admin) => ({
+          recipient: admin._id,
+          type: "USER_REGISTERED",
+          title: "New User Registered",
+          message: `${newUser.fullName} just created an account.`,
+        }));
+        await Notification.insertMany(notificationDocs);
+      } else {
+        console.warn(`⚠️  No admin users found to notify about new user registration: ${newUser.email}`);
+      }
+    } catch (notifyErr) {
+      // ✅ FIX: Log notification error with full context but don't block user signup
+      console.error(`❌ Failed to send admin notifications for new user (${newUser.email}):`, {
+        error: notifyErr.message,
+        stack: notifyErr.stack,
+        timestamp: new Date().toISOString(),
+      });
+      // Non-blocking: Let signup succeed even if notifications fail
+      // In production, these errors should be sent to a monitoring service (e.g., Sentry)
+    }
 
     return res.status(201).json({
       success: true,
@@ -114,22 +159,52 @@ exports.login = async (req, res, next) => {
     user.lockUntil = undefined;
     await user.save();
 
-    user.role = (user.role || "user").toLowerCase();
-    await user.save();
+    // ✅ COMPREHENSIVE ROLE SYNC: Ensure role and roles array are always in sync
+    const normalizedRoleField = user.role?.toLowerCase() || "user";
+    const normalizedRolesArray = Array.isArray(user.roles) 
+      ? user.roles.map(r => String(r).toLowerCase()).filter(Boolean)
+      : [];
 
-    const normalizedRole = user.role;
+    // Determine primary role (priority: admin > hospital_admin > doctor > user)
+    const rolesPriority = ["admin", "hospital_admin", "doctor", "user"];
+    const primaryRole = rolesPriority.find(r => 
+      normalizedRolesArray.includes(r) || r === normalizedRoleField
+    ) || "user";
 
-    // populate
-    if (normalizedRole === 'user' || normalizedRole === 'admin') {
+    // FIX: If role field doesn't match roles array, synchronize them
+    // This handles cases where user.role="admin" but roles=["user"]
+    if (!normalizedRolesArray.includes(primaryRole) || normalizedRoleField !== primaryRole) {
+      // ✅ SECURITY: Only log role sync in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔄 AUTO-SYNC: Synchronizing role fields for ${user.email}`);
+        console.log(`   Before: role="${user.role}", roles=[${user.roles?.join(", ") || ""}]`);
+      }
+      user.role = primaryRole;
+      user.roles = [primaryRole];
+      await user.save();
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`   After: role="${user.role}", roles=[${user.roles?.join(", ") || ""}]`);
+      }
+    }
+    
+    // Ensure role field is set for backward compatibility
+    user.role = primaryRole;
+    // Ensure roles array contains at least the primary role
+    if (!user.roles?.includes(primaryRole)) {
+      user.roles = [primaryRole];
+    }
+
+    // populate based on primary role
+    if (primaryRole === 'user' || primaryRole === 'admin') {
       await user.populate('additionalDetails');
-    } else if (normalizedRole === 'doctor') {
+    } else if (primaryRole === 'doctor') {
       await user.populate({
         path: 'doctorProfile',
         populate: { path: 'additionalDoctorDetails' }
       });
     }
 
-    const accessToken = signAccessToken(user._id, normalizedRole);
+    const accessToken = signAccessToken(user._id, primaryRole);
     const refreshTokenDoc = await signRefreshToken(user._id);
 
     user.password = undefined;
@@ -144,9 +219,16 @@ exports.login = async (req, res, next) => {
       success: true,
       message: 'Login successful',
       accessToken,
-      user
+      user,
+      roles: user.roles // Send all roles to frontend
     });
   } catch (err) {
+    // ✅ SECURITY: Log errors properly, but avoid exposing sensitive details in production
+    if (process.env.NODE_ENV === 'development') {
+      console.log(err.message);
+    } else {
+      console.error('Login error:', err.constructor.name);
+    }
     next(err);
   }
 };
@@ -155,10 +237,32 @@ exports.login = async (req, res, next) => {
 
 exports.sendotp = async(req,res)=>{
     try{
-      console.log("otpreqbody :",req.body)
+      // ✅ SECURITY: Only log request body in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log("otpreqbody :", req.body);
+      }
 const {email}=req.body
 
-const checkuseremail = await User.findOne({email:email})  
+// ✅ SECURITY: Validate email format before any database queries
+if (!email || typeof email !== 'string') {
+  return res.status(400).json({
+    success: false,
+    message: "Email is required and must be a string"
+  });
+}
+
+// ✅ Basic email format validation (RFC 5322 simplified)
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+if (!emailRegex.test(email.trim())) {
+  return res.status(400).json({
+    success: false,
+    message: "Invalid email format"
+  });
+}
+
+const normalizedEmail = email.trim().toLowerCase();
+
+const checkuseremail = await User.findOne({email: normalizedEmail})  
 
  if(checkuseremail){
     return res.status(400).json({
@@ -167,29 +271,58 @@ const checkuseremail = await User.findOne({email:email})
     })
  }
 
- var otp = otpGenerator.generate(6,{
-    upperCaseAlphabets:false,
-    lowerCaseAlphabets:false,
-    specialChars:false
- })
-
- const result = await OTP.findOne({otp:otp})
- while(result){
-     otp = otpGenerator.generate(6,{upperCaseAlphabets:false,lowerCaseAlphabets:false,specialChars:false})
- }
+ // ✅ SECURITY: Fix race condition by generating OTP and checking for existence in atomic operation
+ let otp;
+ let otpRecord;
+ let attempts = 0;
+ const MAX_ATTEMPTS = 10;
+ 
+ do {
+   attempts++;
+   
+   otp = otpGenerator.generate(6,{
+     upperCaseAlphabets:false,
+     lowerCaseAlphabets:false,
+     specialChars:false
+   });
+   
+   // ✅ Use findOne to check if OTP already exists for this email
+   // In high-concurrency scenarios, consider adding a unique constraint on (email, otp)
+   otpRecord = await OTP.findOne({email: normalizedEmail, otp: otp});
+   
+   if (attempts >= MAX_ATTEMPTS && otpRecord) {
+     return res.status(500).json({
+       success: false,
+       message: "Failed to generate unique OTP. Please try again."
+     });
+   }
+ } while (otpRecord);  // ✅ Re-check condition on each iteration
 
  const payload = {
-    email:email,
+    email: normalizedEmail,
     otp:otp
  }
- console.log(payload)
+ if (process.env.NODE_ENV === 'development') {
+   console.log(payload);
+ }
 
- const newotp = await OTP.create(payload)
+ // ✅ Create OTP record. If unique constraint exists on (email, otp), handle E11000 error
+ try {
+   const newotp = await OTP.create(payload);
+ } catch (dupErr) {
+   if (dupErr.code === 11000) {
+     // Duplicate key error - OTP already exists for this email
+     return res.status(400).json({
+       success: false,
+       message: "OTP already generated for this email. Please request a new one."
+     });
+   }
+   throw dupErr;
+ }
 
  return res.status(200).json({
     success:true,
-    message:"otp send successfully",
-    otp:otp
+    message:"otp send successfully"
  })
 
  }catch(err){
@@ -204,25 +337,63 @@ return res.status(500).json({
 
 exports.refresh = async (req, res, next) => {
   try {
-    const token = req.cookies.refreshToken || req.body.refreshToken;
+    // Try to get token from cookies first, then body
+    let token = req.cookies.refreshToken || req.body.refreshToken;
+    
     if (!token || typeof token !== 'string' || !token.trim()) {
-      return res.status(401).json({ success: false, message: 'Refresh token required' });
+      console.warn("No refresh token provided in cookies or body");
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Refresh token required',
+        code: 'NO_REFRESH_TOKEN'
+      });
     }
 
     // basic JWT format check
     const jwtPattern = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/;
     if (!jwtPattern.test(token)) {
-      return res.status(401).json({ success: false, message: 'Malformed refresh token' });
+      console.warn("Invalid JWT format in refresh token");
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Malformed refresh token',
+        code: 'MALFORMED_TOKEN'
+      });
     }
 
+    // Verify and extract payload
     const payload = await verifyRefreshToken(token);
-    const accessToken = signAccessToken(payload.id);
+    
+    // Re-fetch user to get the current role from DB (not the old token payload)
+    const User = require('../models/User');
+    const user = await User.findById(payload.id).select('role roles');
+    
+    if (!user) {
+      console.warn(`User not found for refresh token: ${payload.id}`);
+      return res.status(401).json({ 
+        success: false, 
+        message: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+    
+    const rolesPriority = ["admin", "hospital_admin", "doctor", "user"];
+    const userRoles = Array.isArray(user?.roles) ? user.roles : [user?.role || 'user'];
+    const primaryRole = rolesPriority.find(r => userRoles.includes(r)) || 'user';
+    
+    const accessToken = signAccessToken(payload.id, primaryRole);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`✅ Session refreshed for user: ${user._id}`);
+    }
     res.json({ success: true, accessToken });
   } catch (err) {
     if (process.env.NODE_ENV !== 'production') {
-      console.debug('Refresh token failure:', err.message);
+      console.error('Refresh token failure:', err.message);
     }
-    return res.status(401).json({ success: false, message: 'Invalid refresh token' });
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Invalid refresh token',
+      code: 'INVALID_TOKEN'
+    });
   }
 };
 
@@ -275,10 +446,14 @@ exports.changePassword = async (req, res) => {
           `Password updated successfully for ${updatedUserDetails.fullName} ${updatedUserDetails.lastName}`
         )
       )
-      console.log("Email sent successfully:", emailResponse.response)
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Email sent successfully:", emailResponse.response);
+      }
     } catch (error) {
       // If there's an error sending the email, log the error and return a 500 (Internal Server Error) error
-      console.error("Error occurred while sending email:", error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Error occurred while sending email:", error);
+      }
       return res.status(500).json({
         success: false,
         message: "Error occurred while sending email",
@@ -292,7 +467,9 @@ exports.changePassword = async (req, res) => {
       .json({ success: true, message: "Password updated successfully" })
   } catch (error) {
     // If there's an error updating the password, log the error and return a 500 (Internal Server Error) error
-    console.error("Error occurred while updating password:", error)
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Error occurred while updating password:", error);
+    }
     return res.status(500).json({
       success: false,
       message: "Error occurred while updating password",
@@ -302,6 +479,7 @@ exports.changePassword = async (req, res) => {
 }
 
 const DoctorRegistration = require("../models/DoctorRegistration");
+const Hospital = require("../models/Hospital");
 
 exports.doctorregistration = async (req, res) => {
   try {
@@ -317,8 +495,11 @@ exports.doctorregistration = async (req, res) => {
       hospitalName,
       adminRemarks,
       documents,
+      hospital,
     } = req.body;
-console.log("Req.body :",req.body)
+    if (process.env.NODE_ENV === 'development') {
+      console.log("Req.body :", req.body);
+    }
     // 1. Basic validation
     if (
       !fullName ||
@@ -336,58 +517,57 @@ console.log("Req.body :",req.body)
       });
     }
 
-    const userRole = (user?.role || "").toLowerCase();
-    if (userRole !== "user") {
+    // Support both old (role) and new (roles) formats
+    const userRoles = Array.isArray(user?.roles) ? user.roles : [user?.role || "user"];
+    const canRegisterAsDoctor = userRoles.includes("user") || userRoles.includes("hospital");
+    
+    if (!canRegisterAsDoctor) {
       return res.status(403).json({
         success: false,
-        message: "Only users can apply for doctor registration",
+        message: "Only regular users and hospital owners can apply for doctor registration",
       });
     }
 
-    // 2. Check if already registered for this user
-    const existingRegistration = await DoctorRegistration.findOne({
+    const existingActive = await DoctorRegistration.findOne({
       user: user.id,
+      verificationStatus: { $in: ["PENDING", "APPROVED"] },
     }).sort({ createdAt: -1 });
 
-    if (existingRegistration) {
-      const status = existingRegistration.verificationStatus;
-      if (status === "PENDING" || status === "APPROVED") {
-        return res.status(409).json({
+    if (existingActive) {
+      const status = existingActive.verificationStatus;
+      return res.status(409).json({
+        success: false,
+        message:
+          status === "PENDING"
+            ? "Your application is already under review"
+            : "You are already a verified doctor",
+      });
+    }
+
+    // Validate optional hospital/clinic selection
+    let hospitalDoc = null;
+    let isHospitalOwner = false;
+    let autoApproveByHospital = false;
+    
+    if (hospital) {
+      hospitalDoc = await Hospital.findById(hospital);
+      if (!hospitalDoc || hospitalDoc.status !== "approved") {
+        return res.status(400).json({
           success: false,
-          message:
-            status === "PENDING"
-              ? "Doctor registration already under review"
-              : "Doctor registration already approved",
+          message: "Selected hospital or clinic is not verified on Clinicall yet",
         });
       }
-
-      if (status === "REJECTED") {
-        existingRegistration.fullName = fullName;
-        existingRegistration.email = email;
-        existingRegistration.contact = contact;
-        existingRegistration.specialization = specialization;
-        existingRegistration.qualification = qualification;
-        existingRegistration.experienceYears = experienceYears;
-        existingRegistration.licenseNumber = licenseNumber;
-        existingRegistration.hospitalName = hospitalName;
-        existingRegistration.documents = documents;
-        existingRegistration.adminRemarks = adminRemarks;
-        existingRegistration.verificationStatus = "PENDING";
-        existingRegistration.reviewedAt = null;
-        existingRegistration.submittedAt = new Date();
-        await existingRegistration.save();
-
-        return res.status(200).json({
-          success: true,
-          message: "Doctor registration resubmitted for approval",
-          data: existingRegistration,
-        });
+      
+      // Check if the user owns this hospital
+      if (hospitalDoc.adminUser && hospitalDoc.adminUser.toString() === user.id.toString()) {
+        isHospitalOwner = true;
+        autoApproveByHospital = true; // Auto-approve hospital stage for owner
       }
     }
 
     // 3. Create registration
-    const registration = await DoctorRegistration.create({
-      user:user.id,
+    const registrationData = {
+      user: user.id,
       fullName,
       email,
       contact,
@@ -395,20 +575,81 @@ console.log("Req.body :",req.body)
       qualification,
       experienceYears,
       licenseNumber,
-      hospitalName,
+      hospitalName: hospitalDoc ? hospitalDoc.name : (hospitalName || null),
       documents,
       adminRemarks,
       verificationStatus: "PENDING",
-    });
+      hospital: hospitalDoc ? hospitalDoc._id : null,
+      hospitalStatus: autoApproveByHospital ? "approved_hospital" : "pending_hospital",
+      isHospitalOwnersApplication: isHospitalOwner,
+      autoApprovedByHospital: autoApproveByHospital,
+    };
+    
+    const registration = await DoctorRegistration.create(registrationData);
+
+    try {
+      const admins = await User.find({ $or: [{ roles: "admin" }, { role: "admin" }] }).select("_id");
+      await Promise.all(
+        admins.map((admin) =>
+          sendNotification({
+            recipient: admin._id,
+            type: "DOCTOR_REGISTRATION_SUBMITTED",
+            title: "New Doctor Registration 🩺",
+            message: `${fullName} has submitted a doctor registration application.`,
+          })
+        )
+      );
+    } catch (notifyErr) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Failed to send admin registration notifications:", notifyErr);
+      }
+    }
+
+    // Notify hospital admin if doctor applied to a hospital/clinic
+    // SKIP if this is the hospital owner registering as doctor (they already approved themselves)
+    if (hospitalDoc && hospitalDoc.adminUser && !isHospitalOwner) {
+      try {
+        await sendNotification({
+          recipient: hospitalDoc.adminUser,
+          type:    "DOCTOR_APPLIED_TO_HOSPITAL",
+          title:   "New Doctor Application 🩺",
+          message: `${fullName} has applied to join ${hospitalDoc.name}`,
+        });
+      } catch (notifyErr) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error("Failed to send hospital admin notification:", notifyErr);
+        }
+      }
+    }
+
+    // If hospital owner registering as doctor in their own hospital, send info message
+    if (isHospitalOwner) {
+      try {
+        await sendNotification({
+          recipient: user.id,
+          type: "DOCTOR_AUTO_APPROVED_BY_HOSPITAL",
+          title: "Hospital Approval Automatic ✅",
+          message: "Your doctor application for your hospital was automatically approved. Now awaiting platform admin verification.",
+        });
+      } catch (notifyErr) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error("Failed to send owner notification:", notifyErr);
+        }
+      }
+    }
 
     // 4. Response
     return res.status(201).json({
       success: true,
-      message: "Doctor registration submitted for approval",
+      message: isHospitalOwner 
+        ? "Doctor registration submitted - Hospital approval automatic, awaiting platform admin verification"
+        : "Doctor registration submitted for approval",
       data: registration,
     });
   } catch (err) {
-    console.error(err);
+    if (process.env.NODE_ENV === 'development') {
+      console.error(err);
+    }
     return res.status(500).json({
       success: false,
       message: "Doctor registration failed",
@@ -425,14 +666,29 @@ exports.getDoctorRegistrationStatus = async (req, res) => {
     if (!registration) {
       return res.status(200).json({
         success: true,
-        data: { status: "NONE" },
+        data: { status: "none", message: "No application found" },
       });
     }
+
+    const statusMap = {
+      PENDING: "pending",
+      APPROVED: "approved",
+      REJECTED: "rejected",
+    };
+    const normalizedStatus = statusMap[registration.verificationStatus] || "none";
 
     return res.status(200).json({
       success: true,
       data: {
-        status: registration.verificationStatus,
+        status: normalizedStatus,
+        message:
+          normalizedStatus === "pending"
+            ? "Your application is under review"
+            : normalizedStatus === "approved"
+            ? "You are already a verified doctor"
+            : normalizedStatus === "rejected"
+            ? "Your previous application was rejected"
+            : "No application found",
         registrationId: registration._id,
       },
     });

@@ -19,10 +19,17 @@ const DoctorDashboard = () => {
   useEffect(() => {
     const fetchAppointmentStats = async () => {
       try {
+        console.log('[📊 DOCTOR DASHBOARD] useEffect triggered - fetching appointment stats');
         setLoading(true);
+        console.log('[📊 DOCTOR DASHBOARD] Loading state set to true');
+        
+        console.log('[📊 DOCTOR DASHBOARD] Calling getDoctorAppointmentsByStatus()');
         const grouped = await getDoctorAppointmentsByStatus();
+        
+        console.log('[📊 DOCTOR DASHBOARD] ✅ getDoctorAppointmentsByStatus returned');
+        console.log('[📊 DOCTOR DASHBOARD] Grouped data:', grouped);
 
-        setStats({
+        const newStats = {
           total:
             (grouped.PENDING?.length || 0) +
             (grouped.APPROVED?.length || 0) +
@@ -30,9 +37,21 @@ const DoctorDashboard = () => {
           pending: grouped.PENDING?.length || 0,
           approved: grouped.APPROVED?.length || 0,
           rejected: grouped.REJECTED?.length || 0,
-        });
+        };
+        
+        console.log('[📊 DOCTOR DASHBOARD] Calculated stats:', newStats);
+        
+        setStats(newStats);
+        console.log('[📊 DOCTOR DASHBOARD] Stats state updated successfully');
       } catch (error) {
-        console.error("Error fetching stats:", error);
+        console.error("[📊 DOCTOR DASHBOARD] ❌ Error fetching stats");
+        console.error("[📊 DOCTOR DASHBOARD] Error name:", error.name);
+        console.error("[📊 DOCTOR DASHBOARD] Error message:", error.message);
+        console.error("[📊 DOCTOR DASHBOARD] Error status:", error.response?.status);
+        console.error("[📊 DOCTOR DASHBOARD] Error response data:", error.response?.data);
+        console.error("[📊 DOCTOR DASHBOARD] Error stack:", error.stack);
+        console.error("[📊 DOCTOR DASHBOARD] Full error object:", error);
+        
         toast.error("Failed to load dashboard statistics");
         setStats({
           total: 0,
@@ -42,9 +61,11 @@ const DoctorDashboard = () => {
         });
       } finally {
         setLoading(false);
+        console.log('[📊 DOCTOR DASHBOARD] Loading state set to false');
       }
     };
 
+    console.log('[📊 DOCTOR DASHBOARD] Mounting - calling fetchAppointmentStats');
     fetchAppointmentStats();
   }, []);
 

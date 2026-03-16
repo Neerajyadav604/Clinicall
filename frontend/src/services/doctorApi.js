@@ -40,14 +40,30 @@ export const getDoctorById = async (doctorId) => {
  */
 export const getDoctorAppointments = async (status = null) => {
   try {
+    console.log('[🏥 DOCTOR API] getDoctorAppointments called with status:', status);
+    
     let url = `/appointments/doctor`;
     if (status) {
       url += `?status=${status}`;
     }
+    
+    console.log('[🏥 DOCTOR API] Making request to:', url);
+    
     const response = await axiosInstance.get(url);
+    
+    console.log('[🏥 DOCTOR API] ✅ Response received');
+    console.log('[🏥 DOCTOR API] Status code:', response.status);
+    console.log('[🏥 DOCTOR API] Response data:', JSON.stringify(response.data, null, 2));
+    
     return response.data;
   } catch (error) {
-    console.error("Error fetching doctor appointments:", error);
+    console.error("[🏥 DOCTOR API] ❌ Error fetching doctor appointments");
+    console.error("[🏥 DOCTOR API] Error name:", error.name);
+    console.error("[🏥 DOCTOR API] Error message:", error.message);
+    console.error("[🏥 DOCTOR API] Error status:", error.response?.status);
+    console.error("[🏥 DOCTOR API] Error data:", error.response?.data);
+    console.error("[🏥 DOCTOR API] Error stack:", error.stack);
+    console.error("[🏥 DOCTOR API] Full error object:", error);
     throw error;
   }
 };
@@ -88,10 +104,20 @@ export const rejectAppointment = async (appointmentId, reason = "") => {
  */
 export const getDoctorDashboardStats = async () => {
   try {
+    console.log('[🏥 DOCTOR API] getDoctorDashboardStats called');
+    
     const response = await axiosInstance.get(`/appointments/doctor/stats`);
+    
+    console.log('[🏥 DOCTOR API] ✅ Dashboard stats retrieved');
+    console.log('[🏥 DOCTOR API] Stats data:', response.data);
+    
     return response.data;
   } catch (error) {
-    console.error("Error fetching dashboard stats:", error);
+    console.error("[🏥 DOCTOR API] ❌ Error fetching dashboard stats");
+    console.error("[🏥 DOCTOR API] Error status:", error.response?.status);
+    console.error("[🏥 DOCTOR API] Error data:", error.response?.data);
+    console.error("[🏥 DOCTOR API] Error message:", error.message);
+    console.error("[🏥 DOCTOR API] Error stack:", error.stack);
     throw error;
   }
 };
@@ -101,7 +127,11 @@ export const getDoctorDashboardStats = async () => {
  */
 export const getDoctorAppointmentsByStatus = async () => {
   try {
+    console.log('[🏥 DOCTOR API] getDoctorAppointmentsByStatus called');
+    
     const appointments = await getDoctorAppointments();
+    console.log('[🏥 DOCTOR API] Appointments fetched successfully');
+    console.log('[🏥 DOCTOR API] Raw appointments:', appointments);
 
     // Group appointments by approval status
     const grouped = {
@@ -110,18 +140,32 @@ export const getDoctorAppointmentsByStatus = async () => {
       REJECTED: [],
     };
 
+    console.log('[🏥 DOCTOR API] Starting to group appointments by status');
+    
     if (appointments.data && Array.isArray(appointments.data)) {
+      console.log('[🏥 DOCTOR API] Found', appointments.data.length, 'appointments to group');
       appointments.data.forEach((apt) => {
         const status = apt.approvalstatus || "PENDING";
         if (grouped[status]) {
           grouped[status].push(apt);
+          console.log('[🏥 DOCTOR API] Grouped appointment', apt._id, 'as', status);
         }
       });
+    } else {
+      console.log('[🏥 DOCTOR API] ⚠️  No data array in appointments response');
     }
 
+    console.log('[🏥 DOCTOR API] ✅ Appointments grouped successfully');
+    console.log('[🏥 DOCTOR API] Grouped result:', grouped);
+    
     return grouped;
   } catch (error) {
-    console.error("Error grouping appointments by status:", error);
+    console.error("[🏥 DOCTOR API] ❌ Error grouping appointments by status");
+    console.error("[🏥 DOCTOR API] Error name:", error.name);
+    console.error("[🏥 DOCTOR API] Error message:", error.message);
+    console.error("[🏥 DOCTOR API] Error status:", error.response?.status);
+    console.error("[🏥 DOCTOR API] Error data:", error.response?.data);
+    console.error("[🏥 DOCTOR API] Error stack:", error.stack);
     throw error;
   }
 };

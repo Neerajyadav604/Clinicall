@@ -2,13 +2,15 @@ import React, { useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { NavBar } from './ui/tubelight-navbar';
 import { NAV_LINKS } from '../lib/nav-links';
-import { Home, Calendar, ClipboardList, UserPlus, Info, Phone, LucideIcon } from 'lucide-react';
+import { Home, Calendar, ClipboardList, UserPlus, Info, Phone, Building2, Hospital, LucideIcon } from 'lucide-react';
 
 const iconMap: Record<string, LucideIcon> = {
     Home: Home,
     Appointment: Calendar,
     'My Requests': ClipboardList,
     Register: UserPlus,
+    'Register Hospital': Hospital,
+    Hospitals: Building2,
     About: Info,
     Contact: Phone,
 };

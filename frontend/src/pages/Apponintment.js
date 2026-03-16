@@ -37,35 +37,8 @@ const POPULAR_SERVICES = [
   { title: "Emergency Care", subtitle: "Priority appointment", icon: Ambulance },
 ];
 
-const RECOMMENDED_DOCTORS = [
-  {
-    _id: "rec-1",
-    fullName: "Dr. Priya Sharma",
-    specialization: "Dermatologist",
-    experienceYears: 11,
-    consultationFee: 700,
-    rating: 4.8,
-    availabilityStatus: "Available Today",
-  },
-  {
-    _id: "rec-2",
-    fullName: "Dr. Vivek Menon",
-    specialization: "Cardiologist",
-    experienceYears: 14,
-    consultationFee: 1200,
-    rating: 4.9,
-    availabilityStatus: "Next Available: 5:30 PM",
-  },
-  {
-    _id: "rec-3",
-    fullName: "Dr. Ananya Das",
-    specialization: "General Physician",
-    experienceYears: 8,
-    consultationFee: 500,
-    rating: 4.7,
-    availabilityStatus: "Available Today",
-  },
-];
+// Recommended doctors removed - use searchDoctors API to fetch real data
+// To enable recommendations, add a /api/v1/doctors/recommended endpoint to backend
 
 const RECENT_SEARCHES_KEY = "appointment_recent_searches";
 const RECENT_BOOKINGS_KEY = "appointment_recent_bookings";
@@ -76,8 +49,8 @@ const mapButtonStatus = (status) => {
   if (normal.includes("request") && normal.includes("sent")) return "Pending Approval";
   if (normal.includes("pending")) return "Pending Approval";
   if (normal.includes("accepted") || normal.includes("approve")) return "Request Accepted";
-  if (normal.includes("reject")) return "Rejected";
-  if (normal.includes("book") || normal.includes("request")) return "Book Appointment";
+  if (normal.includes("reject") || normal.includes("again")) return "Request Again";
+  if (normal.includes("book") || normal === "request appointment") return "Book Appointment";
   return status;
 };
 
@@ -140,6 +113,7 @@ const Apponintment = () => {
     appointmentTime: "",
     reason: "",
   });
+  const [bookingError, setBookingError] = useState("");
   const [submittingBooking, setSubmittingBooking] = useState(false);
   const [recentSearches, setRecentSearches] = useState(() =>
     readLocalList(RECENT_SEARCHES_KEY)
@@ -328,16 +302,25 @@ const Apponintment = () => {
   const handleOpenBooking = (doctorId) => {
     setShowBook(doctorId);
     setBookingData({ appointmentDate: "", appointmentTime: "", reason: "" });
+    setBookingError("");
   };
 
   const handleBookingSubmit = async () => {
     if (!showBook) return;
     if (!bookingData.appointmentDate || !bookingData.appointmentTime || !bookingData.reason) {
-      toast.error("Please fill date, time and reason.");
+      setBookingError("Please fill date, time and reason.");
+      return;
+    }
+    const selectedDate = new Date(bookingData.appointmentDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (Number.isNaN(selectedDate.getTime()) || selectedDate < today) {
+      setBookingError("Please choose a valid future date.");
       return;
     }
 
     setSubmittingBooking(true);
+    setBookingError("");
     try {
       await requestAppointment(showBook, bookingData);
       setDoctors((prev) =>
@@ -354,7 +337,7 @@ const Apponintment = () => {
       toast.success("Appointment request sent.");
       setShowBook(null);
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Unable to send request.");
+      setBookingError(error?.response?.data?.message || "Unable to send request.");
     } finally {
       setSubmittingBooking(false);
     }
@@ -651,32 +634,8 @@ const Apponintment = () => {
               </article>
 
               <article className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
-                <h2 className="text-base font-semibold text-slate-900">Recommended Doctors</h2>
-                <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
-                  {RECOMMENDED_DOCTORS.map((doctor) => (
-                    <div
-                      key={doctor._id}
-                      className="min-w-[230px] rounded-2xl border border-slate-200 bg-slate-50 p-3"
-                    >
-                      <div className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-1 text-xs font-semibold text-slate-700">
-                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                        {doctor.rating}
-                      </div>
-                      <h3 className="mt-3 text-sm font-semibold text-slate-900">{doctor.fullName}</h3>
-                      <p className="text-xs text-slate-600">{doctor.specialization}</p>
-                      <p className="mt-2 text-xs text-slate-600">
-                        {doctor.experienceYears} yrs experience
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => handleSpecialtySearch(doctor.specialization)}
-                        className="mt-3 w-full rounded-lg bg-cyan-700 px-3 py-2 text-xs font-semibold text-white"
-                      >
-                        Explore
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <h2 className="text-base font-semibold text-slate-900">Find Doctors</h2>
+                <p className="mt-3 text-sm text-slate-600">Search above to find doctors by name, specialty, or location. Use the filters to narrow your results.</p>
               </article>
 
               <article className="rounded-[20px] border border-slate-200 bg-white p-4 shadow-sm">
@@ -820,12 +779,13 @@ const Apponintment = () => {
                 <input
                   type="date"
                   value={bookingData.appointmentDate}
-                  onChange={(event) =>
+                  onChange={(event) => {
                     setBookingData((prev) => ({
                       ...prev,
                       appointmentDate: event.target.value,
-                    }))
-                  }
+                    }));
+                    if (bookingError) setBookingError("");
+                  }}
                   className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
                 />
               </div>
@@ -834,12 +794,13 @@ const Apponintment = () => {
                 <input
                   type="time"
                   value={bookingData.appointmentTime}
-                  onChange={(event) =>
+                  onChange={(event) => {
                     setBookingData((prev) => ({
                       ...prev,
                       appointmentTime: event.target.value,
-                    }))
-                  }
+                    }));
+                    if (bookingError) setBookingError("");
+                  }}
                   className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
                 />
               </div>
@@ -848,19 +809,29 @@ const Apponintment = () => {
                 <textarea
                   rows={3}
                   value={bookingData.reason}
-                  onChange={(event) =>
-                    setBookingData((prev) => ({ ...prev, reason: event.target.value }))
-                  }
+                  onChange={(event) => {
+                    setBookingData((prev) => ({ ...prev, reason: event.target.value }));
+                    if (bookingError) setBookingError("");
+                  }}
                   className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
                   placeholder="Briefly describe your concern"
                 />
               </div>
             </div>
 
+            {bookingError ? (
+              <div className="error-box mt-3" role="alert" aria-live="polite">
+                {bookingError}
+              </div>
+            ) : null}
+
             <div className="mt-5 grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setShowBook(null)}
+                onClick={() => {
+                  setShowBook(null);
+                  setBookingError("");
+                }}
                 className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700"
               >
                 Cancel

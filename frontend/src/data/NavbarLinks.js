@@ -22,8 +22,18 @@ export const NavbarLinks = [
     role: "user"
 },
 {
+    title:"Register Hospital",
+    path:"/hospital-registration",
+    protected:"true",
+    role: "user"
+},
+{
     title:"About",
     path:"/aboutus"
+},
+{
+    title:"Hospitals",
+    path:"/hospitals"
 },
 {
     title:"Contact",

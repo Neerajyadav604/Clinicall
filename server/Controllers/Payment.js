@@ -7,12 +7,16 @@ require("dotenv").config()
 exports.createOrder = async (req, res) => {
   try {
     const { appointmentId } = req.body;
-    console.log("💰 createOrder called with appointmentId:", appointmentId);
+    if (process.env.NODE_ENV === 'development') {
+      console.log("💰 createOrder called with appointmentId:", appointmentId);
+    }
 
     const appointment = await Appointment.findById(appointmentId)
       .populate("doctorId");
 
-    console.log("📋 Appointment found:", appointment ? "Yes" : "No");
+    if (process.env.NODE_ENV === 'development') {
+      console.log("📋 Appointment found:", appointment ? "Yes" : "No");
+    }
 
     if (!appointment) {
       return res.status(404).json({
@@ -30,20 +34,32 @@ exports.createOrder = async (req, res) => {
 
     const doctorId = appointment.doctorId._id;
 
-    // Try to get doctor profile with consultation fee
+    // ✅ SECURITY: Fetch and verify the consultation fee from doctor profile
     let doctorprofile = await doctorProfile.findOne({ doctorId: doctorId });
 
-    // Default consultation fee if profile doesn't exist
-    let amount = 500; // Default fee in INR
-
-    if (doctorprofile && doctorprofile.consultationFee) {
-      amount = doctorprofile.consultationFee;
-    }
-
-    if (!amount || amount <= 0) {
+    if (!doctorprofile) {
       return res.status(400).json({
         success: false,
-        message: "Invalid consultation fee"
+        message: "Doctor profile not found. Cannot determine consultation fee."
+      });
+    }
+
+    let amount = doctorprofile.consultationFee;
+
+    // Verify amount is valid and matches contracted fee
+    if (!amount || Number(amount) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Doctor has not set a valid consultation fee"
+      });
+    }
+
+    // ✅ Ensure amount is in valid integer range (prevent float issues in Razorpay)
+    amount = Math.round(Number(amount));
+    if (amount > 999999) {
+      return res.status(400).json({
+        success: false,
+        message: "Consultation fee exceeds maximum allowed amount"
       });
     }
 
@@ -53,12 +69,16 @@ exports.createOrder = async (req, res) => {
       receipt: `receipt_${appointmentId}`
     };
 
-    console.log("🔧 Razorpay options:", options);
-    console.log("💳 Razorpay instance:", instance ? "Initialized" : "NOT initialized");
+    if (process.env.NODE_ENV === 'development') {
+      console.log("🔧 Razorpay options:", options);
+      console.log("💳 Razorpay instance:", instance ? "Initialized" : "NOT initialized");
+    }
 
     const order = await instance.orders.create(options);
     
-    console.log("✅ Order created:", order.id);
+    if (process.env.NODE_ENV === 'development') {
+      console.log("✅ Order created:", order.id);
+    }
 
    const paymentcreated =  await Payment.create({
       user: req.user.id,
@@ -67,7 +87,9 @@ exports.createOrder = async (req, res) => {
       amount,
       status: "created"
     });
- console.log("Payment Created", paymentcreated)
+   if (process.env.NODE_ENV === 'development') {
+     console.log("Payment Created", paymentcreated);
+   }
     res.status(200).json({
       success: true,
       orderId: order.id,
@@ -78,8 +100,10 @@ exports.createOrder = async (req, res) => {
       
     });
   } catch (error) {
-    console.error("❌ Payment error:", error.message);
-    console.error("🔍 Full error:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("❌ Payment error:", error.message);
+      console.error("🔍 Full error:", error);
+    }
     res.status(500).json({
       success: false,
       message: error.message
@@ -129,15 +153,25 @@ exports.verifyPayment = async (req, res) => {
       });
     }
 
-   
-    await Appointment.findByIdAndUpdate(
+    // ✅ SECURITY: Verify appointment update succeeded before confirming payment
+    const updatedAppointment = await Appointment.findByIdAndUpdate(
       payment.appointment,
       {
         paymentStatus: "paid",
+        consultationStatus: "active",
+        paidAt: new Date(),
         consultationMode: "online",
         isChatEnabled: true
-      }
+      },
+      { new: true }
     );
+
+    if (!updatedAppointment) {
+      return res.status(404).json({
+        success: false,
+        message: "Appointment not found or could not be updated"
+      });
+    }
 
     res.status(200).json({
       success: true,

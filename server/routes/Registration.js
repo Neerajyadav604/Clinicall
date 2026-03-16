@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const {Registrationapproved,Registrationrejected,getAllRegistrations,deleteDoctor} = require('../Controllers/Registration')
-const {authenticateUser,isadmin} = require('../middileware/authMiddleware')
+const {authenticateUser,isadmin} = require('../middleware/authMiddleware')
 
 router.get("/registration",isadmin,getAllRegistrations)
 router.put("/registration/:id/reject", isadmin,Registrationrejected)

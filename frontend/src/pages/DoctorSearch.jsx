@@ -7,8 +7,8 @@ const mapStatus = (s) => {
   if (normal.includes("request") && normal.includes("sent")) return "Pending Approval";
   if (normal.includes("pending")) return "Pending Approval";
   if (normal.includes("accepted") || normal.includes("approve")) return "Request Accepted";
-  if (normal.includes("reject")) return "Rejected";
-  if (normal.includes("book") || normal.includes("request")) return "Book Appointment";
+  if (normal.includes("reject") || normal.includes("again")) return "Request Again";
+  if (normal.includes("book") || normal === "request appointment") return "Book Appointment";
   return s;
 };
 

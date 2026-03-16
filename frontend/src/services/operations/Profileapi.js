@@ -24,6 +24,7 @@ export function updateUserProfile(token, formData) {
         throw new Error("No authentication token found. Please login again.");
       }
       
+    console.log("Running till line No.27")
       const response = await axiosInstance.put(
         UPDATE_PROFILE_API,
         formData,
@@ -33,6 +34,7 @@ export function updateUserProfile(token, formData) {
           },
         }
       );
+      console.log("Running till line No.37",response.data);
 
       console.log("UPDATE PROFILE API RESPONSE:", response.data);
 
@@ -45,10 +47,12 @@ export function updateUserProfile(token, formData) {
       dispatch(setUser(updatedUser));
 
       toast.success("Profile updated successfully");
-
+      return { success: true, data: updatedUser };
     } catch (error) {
       console.error("UPDATE PROFILE ERROR:", error);
-      toast.error(error.message || "Profile update failed");
+      const message =
+        error?.response?.data?.message || error?.message || "Profile update failed";
+      return { success: false, message };
     } finally {
       toast.dismiss(toastId);
     }
@@ -91,10 +95,14 @@ export function updateDisplayPicture(token, formData) {
       dispatch(setUser(updatedUser));
 
       toast.success("Display picture updated successfully");
-
+      return { success: true, data: updatedUser };
     } catch (error) {
       console.error("UPDATE_DISPLAY_PICTURE_API ERROR:", error);
-      toast.error(error.message || "Could not update display picture");
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Could not update display picture";
+      return { success: false, message };
     } finally {
       toast.dismiss(toastId);
     }

@@ -1,38 +1,32 @@
 import React from "react";
 import { AnimatedTestimonials } from "./ui/animated-testimonials";
 
+interface Testimonial {
+    quote: string;
+    name: string;
+    designation: string;
+    src: string;
+}
+
 export function AnimatedTestimonialsDemo() {
-    const testimonials = [
-        {
-            quote: "The attention to detail and innovative features have completely transformed our workflow. This is exactly what we've been looking for. The clinic management is flawless now.",
-            name: "Dr. Sarah Chen",
-            designation: "Chief Medical Officer at CarePlus",
-            src: "https://images.unsplash.com/photo-1594824436998-d8bb49db607a?q=80&w=2600&auto=format&fit=crop&ixlib=rb-4.0.3",
-        },
-        {
-            quote: "Implementation was seamless and the results exceeded our expectations. The platform's flexibility for scheduling appointments is remarkable.",
-            name: "Dr. Michael Rodriguez",
-            designation: "Lead Surgeon at Innovate Health",
-            src: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=3540&auto=format&fit=crop&ixlib=rb-4.0.3",
-        },
-        {
-            quote: "This solution has significantly improved our team's productivity. The intuitive interface makes complex medical charting simple and fast.",
-            name: "Emily Watson, RN",
-            designation: "Operations Director at CityHospital",
-            src: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=3540&auto=format&fit=crop&ixlib=rb-4.0.3",
-        },
-        {
-            quote: "Outstanding support and robust features. It's rare to find a software product that actually understands clinical workflows intuitively.",
-            name: "Dr. James Kim",
-            designation: "Pediatrician",
-            src: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=3464&auto=format&fit=crop&ixlib=rb-4.0.3",
-        },
-        {
-            quote: "The scalability and performance have been game-changing. Highly recommend this system to any growing clinic or private practice.",
-            name: "Dr. Lisa Thompson",
-            designation: "VP of Medicine at FutureNet",
-            src: "https://images.unsplash.com/photo-1551601651-2a8555f1a1eb?q=80&w=2592&auto=format&fit=crop&ixlib=rb-4.0.3",
-        },
-    ];
+    // Testimonials removed - in production, fetch from backend API
+    // const testimonials = await fetchTestimonials(); // TODO: implement backend endpoint
+    
+    // For now, return empty state
+    const testimonials: Testimonial[] = [];
+    
+    if (testimonials.length === 0) {
+        return (
+            <section className="bg-gradient-to-br from-gray-50 to-blue-50 py-12 sm:py-16 md:py-20 lg:py-24">
+                <div className="max-w-6xl mx-auto text-center px-4 sm:px-6">
+                    <p className="text-blue-500 text-xs sm:text-sm mb-2 font-medium">Healthcare Provider Testimonials</p>
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-8 text-gray-900">What Healthcare Providers Say</h2>
+                    <p className="text-gray-600 text-lg">Testimonials from healthcare providers will appear here.</p>
+                    <p className="text-gray-500 text-sm mt-4">Backend endpoint needed: GET /api/v1/testimonials</p>
+                </div>
+            </section>
+        );
+    }
+    
     return <AnimatedTestimonials testimonials={testimonials} autoplay={true} />;
 }

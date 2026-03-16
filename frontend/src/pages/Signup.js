@@ -67,13 +67,15 @@ const SignUp = () => {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!validate()) {
       setErrors((prev) => ({ ...prev, submit: "Please fix the highlighted fields." }));
       return;
     }
+
+    setErrors((prev) => ({ ...prev, submit: "" }));
 
     const payload = {
       ...formData,
@@ -84,7 +86,13 @@ const SignUp = () => {
     };
 
     dispatch(setSignupData(payload));
-    dispatch(sendOtp(payload.email, navigate));
+    const result = await dispatch(sendOtp(payload.email, navigate));
+    if (result && result.success === false) {
+      setErrors((prev) => ({
+        ...prev,
+        submit: result.message || "Unable to send OTP. Please try again.",
+      }));
+    }
   };
 
   return (
@@ -108,7 +116,7 @@ const SignUp = () => {
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
             {errors.submit ? (
-              <p className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert" aria-live="polite">
+              <p className="error-box" role="alert" aria-live="polite">
                 {errors.submit}
               </p>
             ) : null}

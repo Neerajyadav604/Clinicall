@@ -8,16 +8,67 @@ import {
   Users,
   CheckCircle,
   XCircle,
+  Building2,
+  Hospital,
   LogOut,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "../../lib/utils";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
 
 const AdminLayout = ({ children }) => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { user } = useSelector((state) => state.profile);
+  const { token } = useSelector((state) => state.auth);
+
+  // Check if user is admin
+  const isAdmin = React.useMemo(() => {
+    if (!user) return false;
+    
+    // Debug logging
+    console.log("AdminLayout - User object:", user);
+    console.log("AdminLayout - User roles:", user.roles);
+    console.log("AdminLayout - User role:", user.role);
+    console.log("AdminLayout - Token exists:", !!token);
+    
+    // Support both old (role string) and new (roles array) schema
+    const userRoles = Array.isArray(user.roles) 
+      ? user.roles.map(r => r.toLowerCase()) 
+      : (user.role ? [user.role.toLowerCase()] : []);
+    
+    console.log("AdminLayout - Normalized roles:", userRoles);
+    const isAdminUser = userRoles.includes("admin");
+    console.log("AdminLayout - Is admin?", isAdminUser);
+    
+    return isAdminUser;
+  }, [user]);
+
+  React.useEffect(() => {
+    // IMPORTANT: Redirect if user is logged in but NOT admin
+    // We check "user &&" to make sure we have user data before redirecting
+    if (user && !isAdmin) {
+      console.warn("AdminLayout - User is not admin, redirecting to home");
+      console.warn("User object:", user);
+      console.warn("User roles:", user.roles);
+      console.warn("User role:", user.role);
+      
+      // Toast error with helpful message
+      toast.error("Access denied. Admin role required.", { 
+        autoClose: 5000,
+        hideProgressBar: false 
+      });
+      navigate("/");
+    }
+    
+    // Also redirect if no user is logged in at all
+    if (!user && user !== undefined) {
+      console.log("AdminLayout - No user logged in, redirecting to login");
+      navigate("/login");
+    }
+  }, [isAdmin, user, navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -62,14 +113,24 @@ const AdminLayout = ({ children }) => {
       href: "/admin/rejected-doctors",
       icon: <XCircle className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
     },
+    {
+      label: "Hospital Registrations",
+      href: "/admin/hospital-registrations",
+      icon: <Hospital className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+    },
+    {
+      label: "Approved Hospitals",
+      href: "/admin/hospitals",
+      icon: <Building2 className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />,
+    },
   ];
 
   return (
-    // Use min-h-[calc(100vh-96px)] so it fills the remaining screen below the 96px (pt-24) top navbar
-    <div className="flex flex-row w-full min-h-[calc(100vh-96px)] bg-gray-50 dark:bg-neutral-900">
+    isAdmin ? (
+    <div className="flex flex-row w-full min-h-screen bg-gray-50 dark:bg-neutral-900">
       {/* Sidebar */}
       <Sidebar open={open} setOpen={setOpen}>
-        <SidebarBody className="justify-between gap-10 min-h-[calc(100vh-96px)]">
+        <SidebarBody className="justify-between gap-10 min-h-screen">
           <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
             {/* Logo */}
             {open ? (
@@ -128,6 +189,13 @@ const AdminLayout = ({ children }) => {
         </div>
       </div>
     </div>
+    ) : (
+      <div className="flex items-center justify-center w-full min-h-screen bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-600">Loading admin dashboard...</p>
+        </div>
+      </div>
+    )
   );
 };
 

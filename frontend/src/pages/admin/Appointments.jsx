@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import AdminLayout from "./AdminLayout";
 import TableComponent from "../../components/admin/TableComponent";
 import { HiOutlineCheck, HiOutlineX, HiOutlineEye } from "react-icons/hi";
 import { toast } from "react-toastify";
@@ -118,8 +117,7 @@ const Appointments = () => {
   ];
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -150,9 +148,7 @@ const Appointments = () => {
         {/* Table */}
         <TableComponent columns={columns} data={appointments} loading={loading} />
       </div>
-    </AdminLayout>
   );
 };
-;
 
 export default Appointments;

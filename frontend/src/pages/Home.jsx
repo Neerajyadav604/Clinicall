@@ -22,7 +22,7 @@ const socialLinks = [
 
 const Home = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 relative overflow-hidden mt-11">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 relative overflow-visible mt-11">
       
         <div className="absolute top-16 left-1/2 transform -translate-x-1/2 w-12 sm:w-16 md:w-20 h-12 sm:h-16 md:h-20 border-2 sm:border-3 md:border-4 border-blue-400 rounded-full opacity-60"></div>
       
@@ -48,10 +48,12 @@ const Home = () => {
       {/* hero section replaced by minimalist component */}
       <MinimalistHero
         mainText="Quick and easy medical appointments from the comfort of your home."
-        readMoreLink="/about"
+        readMoreLink="/aboutus"
         imageSrc={doctorMask}
         imageAlt="Medical Professional"
-        overlayText={{ part1: 'Care', part2: 'at Home' }}
+       
+        ctaText="Book an Appointment"
+        ctaLink="/appointment"
         locationText="Worldwide"
       />
         <WhyChooseUs/>

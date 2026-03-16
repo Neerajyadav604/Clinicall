@@ -17,7 +17,7 @@ const Users = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getUsers();
+      const data = await getUsers("user");
       setUsers(data.data || []);
     } catch (err) {
       console.error("Error fetching users:", err);

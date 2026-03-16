@@ -7,7 +7,7 @@ export const authendpoint = {
     LOGIN_API: "/login",
     SIGNUP_API: "/signup",
     DOCTOR_REGISTRATION_API: "/doctorregistration",
-    DOCTOR_REGISTRATION_STATUS_API: "/doctorregistration/status",
+    DOCTOR_REGISTRATION_STATUS_API: "/doctor-registration/status",
     REFRESH_API: "/refresh",
 }
 

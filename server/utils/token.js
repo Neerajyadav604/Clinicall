@@ -10,8 +10,26 @@ if (!JWT_SECRET || !REFRESH_TOKEN_SECRET) {
   throw new Error('Missing JWT configuration; check environment variables');
 }
 
-exports.signAccessToken = (userId, role) => {
-  return jwt.sign({ id: userId, role }, JWT_SECRET, { expiresIn: '15m' });
+// Standard: backwards compatible with existing code
+exports.signAccessToken = (userId, role, fhirClaims = null) => {
+  // ✅ SECURITY: Validate role against allowlist to prevent arbitrary role injection
+  const VALID_ROLES = ['user', 'admin', 'doctor', 'hospital_admin'];
+  const normalizedRole = String(role).toLowerCase();
+  
+  if (!VALID_ROLES.includes(normalizedRole)) {
+    throw new Error(`Invalid role "${role}". Allowed roles: ${VALID_ROLES.join(', ')}`);
+  }
+  
+  const payload = { id: userId, role: normalizedRole };
+  
+  // Add FHIR-specific claims if provided
+  if (fhirClaims) {
+    if (fhirClaims.fhirUser) payload.fhirUser = fhirClaims.fhirUser; // e.g. "Patient/123"
+    if (fhirClaims.patientId) payload.patientId = fhirClaims.patientId; // MongoDB _id
+    if (fhirClaims.scopes) payload.scope = fhirClaims.scopes; // FHIR scopes: "launch/patient patient/read"
+  }
+  
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '2h' }); // ✅ Changed from 15m to 2 hours
 };
 
 exports.signRefreshToken = async (userId) => {

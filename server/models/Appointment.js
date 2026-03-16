@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const fieldEncryption = require('mongoose-field-encryption').fieldEncryption;
 
 const AppointmentSchema = new mongoose.Schema(
   {
@@ -29,11 +30,19 @@ const AppointmentSchema = new mongoose.Schema(
       type: String,
     },
     
-    paymentStatus:{
-      type:String,
-      enum:["paid","unpaid"],
-      default:"paid"
-
+    paymentStatus: {
+      type: String,
+      enum: ["unpaid", "paid", "refunded"],
+      default: "unpaid",
+    },
+    consultationStatus: {
+      type: String,
+      enum: ["locked", "active", "completed"],
+      default: "locked",
+    },
+    paidAt: {
+      type: Date,
+      default: null,
     },
     approvalstatus:{
       type:String,
@@ -57,5 +66,14 @@ const AppointmentSchema = new mongoose.Schema(
     timestamps: true, // automatically adds createdAt & updatedAt
   }
 );
+
+// Encrypt sensitive fields
+if (!process.env.FIELD_ENC_KEY) {
+  throw new Error('FATAL: FIELD_ENC_KEY environment variable is required for PHI encryption');
+}
+AppointmentSchema.plugin(fieldEncryption, {
+  fields: ['reason', 'cancellationReason'],
+  secret: process.env.FIELD_ENC_KEY,
+});
 
 module.exports = mongoose.model("Appointment", AppointmentSchema);

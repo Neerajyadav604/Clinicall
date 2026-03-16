@@ -33,9 +33,12 @@ const UserProfileSchema = new mongoose.Schema(
 );
 
 // encrypt sensitive fields
+if (!process.env.FIELD_ENC_KEY) {
+  throw new Error('FATAL: FIELD_ENC_KEY environment variable is required for PHI encryption');
+}
 UserProfileSchema.plugin(fieldEncryption, {
-  fields: ['address','medicalHistory','medications','emergencyContact','insurance'],
-  secret: process.env.FIELD_ENC_KEY || 'change_this_in_prod',
+  fields: ['dob', 'gender', 'bloodGroup', 'address','medicalHistory','medications','emergencyContact'],
+  secret: process.env.FIELD_ENC_KEY,
 });
 
 module.exports = mongoose.model("userProfile",UserProfileSchema)

@@ -1,18 +1,21 @@
 const express = require("express");
 const router = express.Router();
 
-const { authenticateUser, isDoctor } = require("../middileware/authMiddleware");
+const { authenticateUser, isDoctor } = require("../middleware/authMiddleware");
 const Doctor = require("../models/Doctor");
 const Appointment = require("../models/Appointment");
 
-const {
-  approveAppointment,
-  rejectAppointment,
-} = require("../Controllers/ManageAppoinment");
+const { approveAppointment, rejectAppointment } = require("../Controllers/ManageAppoinment");
 
 // ============================================
 // DOCTOR PROFILE ENDPOINTS
 // ============================================
+
+console.log("🔵 [DOCTOR.JS] Routes file is being loaded");
+console.log("🔵 [DOCTOR.JS] authenticateUser middleware available:", typeof authenticateUser);
+console.log("🔵 [DOCTOR.JS] isDoctor middleware available:", typeof isDoctor);
+console.log("🔵 [DOCTOR.JS] Doctor model available:", typeof Doctor);
+console.log("🔵 [DOCTOR.JS] Appointment model available:", typeof Appointment);
 
 /**
  * GET /api/v1/profile/me
@@ -61,17 +64,39 @@ router.get("/profile/me", authenticateUser, isDoctor, async (req, res) => {
 router.get("/appointments/doctor", authenticateUser, isDoctor, async (req, res) => {
   try {
     const userId = req.user.id;
-
+    const timestamp = new Date().toISOString();
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`[🏥 BACKEND APPOINTMENTS] ${timestamp}`);
+    console.log(`[🏥 BACKEND APPOINTMENTS] ═══ INCOMING REQUEST ═══`);
+    console.log(`[🏥 BACKEND APPOINTMENTS] User ID from auth middleware: ${userId}`);
+    console.log(`[🏥 BACKEND APPOINTMENTS] User role: ${req.user.role}`);
+    console.log(`[🏥 BACKEND APPOINTMENTS] Request headers:`, JSON.stringify(req.headers, null, 2));
+    console.log(`[🏥 BACKEND APPOINTMENTS] Request method: ${req.method}`);
+    console.log(`[🏥 BACKEND APPOINTMENTS] Request URL: ${req.originalUrl}`);
+    
+    console.log(`[🏥 BACKEND APPOINTMENTS] ═══ DATABASE QUERY ═══`);
+    console.log(`[🏥 BACKEND APPOINTMENTS] Searching for doctor with user ID: ${userId}`);
+    
     // Find doctor by user ID
     const doctor = await Doctor.findOne({ user: userId });
 
     if (!doctor) {
+      console.log(`[🏥 BACKEND APPOINTMENTS] ❌ Doctor not found for userId: ${userId}`);
+      console.log(`[🏥 BACKEND APPOINTMENTS] This means the Doctor record doesn't exist or is not linked to this user ID`);
       return res.status(404).json({
         success: false,
         message: "Doctor not found",
       });
     }
 
+    console.log(`[🏥 BACKEND APPOINTMENTS] ✅ Doctor found successfully`);
+    console.log(`[🏥 BACKEND APPOINTMENTS] Doctor ID: ${doctor._id}`);
+    console.log(`[🏥 BACKEND APPOINTMENTS] Doctor name: ${doctor.fullName}`);
+    console.log(`[🏥 BACKEND APPOINTMENTS] Doctor specialization: ${doctor.specialization}`);
+
+    console.log(`[🏥 BACKEND APPOINTMENTS] ═══ FETCHING APPOINTMENTS ═══`);
+    console.log(`[🏥 BACKEND APPOINTMENTS] Querying Appointment collection with doctorId: ${doctor._id}`);
+    
     // Get all appointments for this doctor
     const appointments = await Appointment.find({
       doctorId: doctor._id,
@@ -79,18 +104,74 @@ router.get("/appointments/doctor", authenticateUser, isDoctor, async (req, res) 
       .populate("userId", "fullName email contact")
       .sort({ createdAt: -1 });
 
-    return res.status(200).json({
+    console.log(`[🏥 BACKEND APPOINTMENTS] ✅ Query completed successfully`);
+    console.log(`[🏥 BACKEND APPOINTMENTS] Total appointments found: ${appointments.length}`);
+    console.log(`[🏥 BACKEND APPOINTMENTS] Sample appointment (first):`, appointments[0] ? JSON.stringify(appointments[0], null, 2) : 'N/A');
+    
+    const responsePayload = {
       success: true,
       data: appointments,
       count: appointments.length,
-    });
+    };
+    
+    console.log(`[🏥 BACKEND APPOINTMENTS] ═══ SENDING RESPONSE ═══`);
+    console.log(`[🏥 BACKEND APPOINTMENTS] Response status: 200 OK`);
+    console.log(`[🏥 BACKEND APPOINTMENTS] Response payload:`, JSON.stringify(responsePayload, null, 2));
+    console.log(`${'='.repeat(80)}\n`);
+
+    return res.status(200).json(responsePayload);
   } catch (error) {
-    console.error("Error fetching doctor appointments:", error);
+    const timestamp = new Date().toISOString();
+    console.error(`\n${'='.repeat(80)}`);
+    console.error(`[🏥 BACKEND APPOINTMENTS] ${timestamp}`);
+    console.error(`[🏥 BACKEND APPOINTMENTS] ❌ ERROR CAUGHT IN ROUTE HANDLER`);
+    console.error(`[🏥 BACKEND APPOINTMENTS] Error occurred while processing request`);
+    console.error(`[🏥 BACKEND APPOINTMENTS] Error Name: ${error.name}`);
+    console.error(`[🏥 BACKEND APPOINTMENTS] Error Message: ${error.message}`);
+    console.error(`[🏥 BACKEND APPOINTMENTS] Error Code: ${error.code}`);
+    console.error(`[🏥 BACKEND APPOINTMENTS] Error Stack:`, error.stack);
+    console.error(`[🏥 BACKEND APPOINTMENTS] Full Error Object:`, JSON.stringify(error, null, 2));
+    console.error(`[🏥 BACKEND APPOINTMENTS] Request User ID: ${req.user?.id}`);
+    console.error(`[🏥 BACKEND APPOINTMENTS] Request method: ${req.method}`);
+    console.error(`[🏥 BACKEND APPOINTMENTS] Request URL: ${req.originalUrl}`);
+    console.error(`${'='.repeat(80)}\n`);
+    
     return res.status(500).json({
       success: false,
       message: "Failed to fetch appointments",
       error: error.message,
     });
+  }
+});
+
+/**
+ * GET /api/v1/appointments/:appointmentId
+ * Get appointment details for doctor
+ */
+router.get("/appointments/:appointmentId", authenticateUser, isDoctor, async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    const userId = req.user.id;
+
+    const doctor = await Doctor.findOne({ user: userId });
+    if (!doctor) {
+      return res.status(404).json({ success: false, message: "Doctor not found" });
+    }
+
+    const appointment = await Appointment.findById(appointmentId)
+      .populate("userId", "fullName email contact");
+
+    if (!appointment) {
+      return res.status(404).json({ success: false, message: "Appointment not found" });
+    }
+
+    if (appointment.doctorId.toString() !== doctor._id.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+
+    return res.status(200).json({ success: true, data: appointment });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 });
 
@@ -101,18 +182,30 @@ router.get("/appointments/doctor", authenticateUser, isDoctor, async (req, res) 
 router.get("/appointments/doctor/stats", authenticateUser, isDoctor, async (req, res) => {
   try {
     const userId = req.user.id;
+    const timestamp = new Date().toISOString();
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`[📊 BACKEND STATS] ${timestamp}`);
+    console.log(`[📊 BACKEND STATS] ═══ INCOMING REQUEST ═══`);
+    console.log(`[📊 BACKEND STATS] User ID from auth middleware: ${userId}`);
+    console.log(`[📊 BACKEND STATS] User role: ${req.user.role}`);
 
     // Find doctor by user ID
     const doctor = await Doctor.findOne({ user: userId });
 
     if (!doctor) {
+      console.log(`[📊 BACKEND STATS] ❌ Doctor not found for userId: ${userId}`);
       return res.status(404).json({
         success: false,
         message: "Doctor not found",
       });
     }
 
+    console.log(`[📊 BACKEND STATS] ✅ Doctor found successfully`);
+    console.log(`[📊 BACKEND STATS] Doctor ID: ${doctor._id}`);
+
     const doctorId = doctor._id;
+
+    console.log(`[📊 BACKEND STATS] ═══ QUERYING APPOINTMENT COUNTS ═══`);
 
     // Get counts by status
     const stats = {
@@ -131,12 +224,36 @@ router.get("/appointments/doctor/stats", authenticateUser, isDoctor, async (req,
       }),
     };
 
-    return res.status(200).json({
+    console.log(`[📊 BACKEND STATS] ✅ Appointment counts retrieved`);
+    console.log(`[📊 BACKEND STATS] Total appointments: ${stats.total}`);
+    console.log(`[📊 BACKEND STATS] Pending appointments: ${stats.pending}`);
+    console.log(`[📊 BACKEND STATS] Approved appointments: ${stats.approved}`);
+    console.log(`[📊 BACKEND STATS] Rejected appointments: ${stats.rejected}`);
+
+    const responsePayload = {
       success: true,
       data: stats,
-    });
+    };
+    
+    console.log(`[📊 BACKEND STATS] ═══ SENDING RESPONSE ═══`);
+    console.log(`[📊 BACKEND STATS] Response status: 200 OK`);
+    console.log(`[📊 BACKEND STATS] Response payload:`, JSON.stringify(responsePayload, null, 2));
+    console.log(`${'='.repeat(80)}\n`);
+
+    return res.status(200).json(responsePayload);
   } catch (error) {
-    console.error("Error fetching doctor stats:", error);
+    const timestamp = new Date().toISOString();
+    console.error(`\n${'='.repeat(80)}`);
+    console.error(`[📊 BACKEND STATS] ${timestamp}`);
+    console.error(`[📊 BACKEND STATS] ❌ ERROR CAUGHT IN ROUTE HANDLER`);
+    console.error(`[📊 BACKEND STATS] Error Name: ${error.name}`);
+    console.error(`[📊 BACKEND STATS] Error Message: ${error.message}`);
+    console.error(`[📊 BACKEND STATS] Error Code: ${error.code}`);
+    console.error(`[📊 BACKEND STATS] Error Stack:`, error.stack);
+    console.error(`[📊 BACKEND STATS] Full Error Object:`, JSON.stringify(error, null, 2));
+    console.error(`[📊 BACKEND STATS] Request User ID: ${req.user?.id}`);
+    console.error(`${'='.repeat(80)}\n`);
+    
     return res.status(500).json({
       success: false,
       message: "Failed to fetch appointment statistics",
@@ -211,6 +328,7 @@ console.log("data :",appointment.doctorId.toString() !== doctor._id.toString())
     const canAccess =
       appointment.approvalstatus === "APPROVED" &&
       appointment.paymentStatus === "paid" &&
+      appointment.consultationStatus === "active" &&
       appointment.consultationMode === "online";
 
     if (!canAccess) {
@@ -222,12 +340,15 @@ console.log("data :",appointment.doctorId.toString() !== doctor._id.toString())
           approvalstatus: appointment.approvalstatus,
           paymentStatus: appointment.paymentStatus,
           consultationMode: appointment.consultationMode,
+          consultationStatus: appointment.consultationStatus,
         },
         reason:
           appointment.approvalstatus !== "APPROVED"
             ? "Appointment not approved"
             : appointment.paymentStatus !== "paid"
             ? "Payment not completed"
+            : appointment.consultationStatus !== "active"
+            ? "Consultation not active"
             : "Consultation mode not set to online",
       });
     }

@@ -1,31 +1,28 @@
 import { useState } from "react";
 
-const testimonials = [
-  {
-    name: "John Doe",
-    role: "Entrepreneur",
-    img: "https://i.pravatar.cc/100?img=1",
-    text:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ipsam temporibud quiden magni."
-  },
-  {
-    name: "Jane Smith",
-    role: "Designer",
-    img: "https://i.pravatar.cc/100?img=2",
-    text:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Inventore nisi velit minima."
-  },
-  {
-    name: "Alex Brown",
-    role: "Developer",
-    img: "https://i.pravatar.cc/100?img=3",
-    text:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quasi natus inventore."
-  }
-];
+// Testimonials moved to AnimatedTestimonialsDemo
+// This component now serves as a fallback and shows a message when no real data is available
+const testimonials = [];
 
 export default function Testimonials() {
-  const [activeIndex, setActiveIndex] = useState(1);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // No real testimonials available - component can be repurposed or removed
+  if (testimonials.length === 0) {
+    return (
+      <section className="bg-gradient-to-br from-gray-50 to-blue-50 py-12 sm:py-16 md:py-20 lg:py-24">
+        <div className="max-w-6xl mx-auto text-center px-4 sm:px-6">
+          <p className="text-blue-500 text-xs sm:text-sm mb-2 font-medium">
+            Patient Testimonials
+          </p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-8 sm:mb-12 md:mb-16 text-gray-900">
+            Testimonials
+          </h2>
+          <p className="text-gray-600 text-lg">No testimonials to display at this time.</p>
+        </div>
+      </section>
+    );
+  }
 
   const prevSlide = () => {
     setActiveIndex(

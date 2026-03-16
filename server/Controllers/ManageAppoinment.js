@@ -8,6 +8,7 @@ const appointmentrejectiontemplate = require('../mail/templates/appointmentrejec
 
 
 const mailSender = require('../utils/mailSender')
+const { sendNotification } = require("../utils/sendNotification");
 
 exports.requestAppointment = async (req, res) => {
   try {
@@ -22,6 +23,52 @@ exports.requestAppointment = async (req, res) => {
       });
     }
 
+    // ✅ SECURITY: Validate appointment date is in the future
+    const appointmentDateTime = new Date(`${appointmentDate}T${appointmentTime}`);
+    const now = new Date();
+    
+    if (appointmentDateTime <= now) {
+      return res.status(400).json({
+        success: false,
+        message: "Appointment date and time must be in the future"
+      });
+    }
+
+    // ✅ Optionally: Prevent appointments beyond a certain timeframe (e.g., 1 year from now)
+    const maxDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+    if (appointmentDateTime > maxDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Appointment date cannot be more than 1 year in the future"
+      });
+    }
+
+    // ✅ SECURITY: Validate reason field (max length and basic sanitization)
+    if (typeof reason !== 'string' || reason.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Reason must be a non-empty string"
+      });
+    }
+
+    const trimmedReason = reason.trim();
+    const MAX_REASON_LENGTH = 500;
+    
+    if (trimmedReason.length > MAX_REASON_LENGTH) {
+      return res.status(400).json({
+        success: false,
+        message: `Reason must not exceed ${MAX_REASON_LENGTH} characters`
+      });
+    }
+
+    // ✅ Basic sanitization: prevent obvious injection attempts
+    if (/<[^>]*>/g.test(trimmedReason)) {
+      return res.status(400).json({
+        success: false,
+        message: "Reason must not contain HTML tags"
+      });
+    }
+
     const doctorExists = await Doctor.findById(doctorId);
     if (!doctorExists) {
       return res.status(404).json({
@@ -30,17 +77,18 @@ exports.requestAppointment = async (req, res) => {
       });
     }
 
+    // BUGFIX: Only check for PENDING appointments to prevent duplicate requests
+    // Allow rebooking after APPROVED/COMPLETED appointments
     const existingAppointment = await Appointment.findOne({
       userId,
       doctorId,
-      status: "NOT SCHEDULED",
       approvalstatus: "PENDING",
     });
 
     if (existingAppointment) {
       return res.status(400).json({
         success: false,
-        message: "Appointment request already sent",
+        message: "Appointment request already sent for this doctor",
       });
     }
 
@@ -52,13 +100,28 @@ exports.requestAppointment = async (req, res) => {
       reason,
       status: "NOT SCHEDULED",
       approvalstatus: "PENDING",
+      paymentStatus: "unpaid",
+      consultationStatus: "locked",
     });
 
 
     const user = await User.findById(userId);
+    // ✅ SECURITY: Check if doctor exists and is not null before accessing properties
     const doctor = await Doctor.findById(doctorId);
-
-
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+    
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: "Doctor not found"
+      });
+    }
 
     const username = user.fullName;
     const doctorname = doctor.fullName;
@@ -85,6 +148,29 @@ exports.requestAppointment = async (req, res) => {
       console.error("Email failed but appointment created:", mailErr.message);
     }
 
+    try {
+      await sendNotification({
+        recipient: userId,
+        type: "APPOINTMENT_BOOKED",
+        title: "Appointment Confirmed ✅",
+        message: `Your appointment with Dr. ${doctorname} is confirmed for ${new Date(
+          appointmentDate
+        ).toLocaleDateString()} at ${appointmentTime}.`,
+      });
+      await sendNotification({
+        recipient: doctor.user,
+        type: "APPOINTMENT_BOOKED",
+        title: "New Appointment Booked 📅",
+        message: `You have a new appointment with ${username} on ${new Date(
+          appointmentDate
+        ).toLocaleDateString()} at ${appointmentTime}.`,
+      });
+    } catch (notifyErr) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Failed to send appointment booking notifications:", notifyErr);
+      }
+    }
+
 
 
     try {
@@ -103,7 +189,9 @@ exports.requestAppointment = async (req, res) => {
         )
       );
     } catch (mailErr) {
-      console.error("Email failed but appointment created:", mailErr.message);
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Email failed but appointment created:", mailErr.message);
+      }
     }
 
     return res.status(200).json({
@@ -113,7 +201,9 @@ exports.requestAppointment = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
+    if (process.env.NODE_ENV === 'development') {
+      console.error(err);
+    }
     return res.status(500).json({
       success: false,
       message: "Cannot book appointment",
@@ -129,13 +219,17 @@ exports.approveAppointment = async (req, res) => {
   try {
     const user = req.user.id;
     const { appointmentId } = req.params;
-    console.log("userId :", user)
+    if (process.env.NODE_ENV === 'development') {
+      console.log("userId :", user);
+    }
 
 
     const doctor = await Doctor.findOne({ user: user })
     const doctorId = doctor._id
 
-    console.log(doctorId)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(doctorId);
+    }
 
     const appointment = await Appointment.findOne({
       _id: appointmentId,
@@ -154,10 +248,13 @@ exports.approveAppointment = async (req, res) => {
 
     appointment.approvalstatus = "APPROVED"
     await appointment.save();
+    appointment.paymentStatus = "unpaid";
+    appointment.consultationStatus = "locked";
+    await appointment.save();
 
     try {
 
-      const user = await User.findById(user)
+      const user = await User.findById(appointment.userId)
       const doctor = await Doctor.findById(doctorId)
 
       const username = user.fullName;
@@ -173,6 +270,21 @@ exports.approveAppointment = async (req, res) => {
 
     } catch (err) {
       console.log(err)
+    }
+
+    try {
+      await sendNotification({
+        recipient: appointment.userId,
+        type: "APPOINTMENT_UPDATED",
+        title: "Appointment Confirmed ✅",
+        message: `Your appointment with Dr. ${doctor.fullName} is confirmed for ${new Date(
+          appointment.appointmentDate
+        ).toLocaleDateString()} at ${appointment.appointmentTime}.`,
+      });
+    } catch (notifyErr) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Failed to send appointment approval notification:", notifyErr);
+      }
     }
 
 
@@ -202,7 +314,7 @@ exports.rejectAppointment = async (req, res) => {
 
     const appointment = await Appointment.findOne({
       _id: appointmentId,
-      doctor: doctorId
+      doctorId: doctorId
     });
 
     if (!appointment) {
@@ -240,7 +352,24 @@ exports.rejectAppointment = async (req, res) => {
 
 
     } catch (err) {
-      console.log(err)
+      if (process.env.NODE_ENV === 'development') {
+        console.log(err);
+      }
+    }
+
+    try {
+      await sendNotification({
+        recipient: appointment.userId,
+        type: "APPOINTMENT_CANCELLED",
+        title: "Appointment Cancelled",
+        message: `Your appointment with Dr. ${doctor.fullName} on ${new Date(
+          appointment.appointmentDate
+        ).toLocaleDateString()} has been cancelled.`,
+      });
+    } catch (notifyErr) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Failed to send appointment rejection notification:", notifyErr);
+      }
     }
 
 
@@ -251,7 +380,9 @@ exports.rejectAppointment = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
+    if (process.env.NODE_ENV === 'development') {
+      console.error(err);
+    }
     res.status(500).json({
       success: false,
       message: "Rejection failed"
@@ -291,7 +422,9 @@ exports.getuserappointmentsrequeste = async (req, res) => {
 
   } catch (err) {
 
-    console.log(err)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(err);
+    }
     return res.status(500).json({
       success: false,
       message: "Cannot find Appointments Requested"
@@ -330,7 +463,9 @@ exports.getuserappointmentsrequestefordoctor = async (req, res) => {
 
   } catch (err) {
 
-    console.log(err)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(err);
+    }
     return res.status(500).json({
       success: false,
       message: "Cannot find Appointments Requested"
@@ -350,7 +485,8 @@ exports.appointmentCompleted = async (req, res) => {
         status: "SCHEDULED"
       },
       {
-        status: "COMPLETED"
+        status: "COMPLETED",
+        consultationStatus: "completed"
       },
       { new: true }
     );
@@ -367,6 +503,19 @@ exports.appointmentCompleted = async (req, res) => {
       message: "Appointment completed successfully",
       data: appointment
     });
+
+    try {
+      await sendNotification({
+        recipient: appointment.userId,
+        type: "APPOINTMENT_UPDATED",
+        title: "Appointment Updated",
+        message: "Your appointment status has been updated to completed.",
+      });
+    } catch (notifyErr) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Failed to send appointment completion notification:", notifyErr);
+      }
+    }
 
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -419,14 +568,26 @@ exports.appointmentcompletion = async (req, res) => {
     const { appointmentId } = req.params;
 
     const appointment = await Appointment.findByIdAndUpdate(appointmentId, {
-      status: "COMPLETED"
+      status: "COMPLETED",
+      consultationStatus: "completed"
     },
       { new: true }
     )
 
-
-
-
+    try {
+      if (appointment?.userId) {
+        await sendNotification({
+          recipient: appointment.userId,
+          type: "APPOINTMENT_UPDATED",
+          title: "Appointment Updated",
+          message: "Your appointment status has been updated to completed.",
+        });
+      }
+    } catch (notifyErr) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Failed to send appointment completion notification:", notifyErr);
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -434,7 +595,9 @@ exports.appointmentcompletion = async (req, res) => {
     })
 
 } catch (err) {
-    console.log(err)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(err);
+    }
   }
 }
 
@@ -473,7 +636,9 @@ exports.getDoctorAppointments = async (req, res) => {
       count: appointments.length,
     });
   } catch (error) {
-    console.error("Error fetching doctor appointments:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Error fetching doctor appointments:", error);
+    }
     return res.status(500).json({
       success: false,
       message: "Failed to fetch appointments",
@@ -524,7 +689,9 @@ exports.getDoctorAppointmentStats = async (req, res) => {
       data: stats,
     });
   } catch (error) {
-    console.error("Error fetching doctor stats:", error);
+    if (process.env.NODE_ENV === 'development') {
+      console.error("Error fetching doctor stats:", error);
+    }
     return res.status(500).json({
       success: false,
       message: "Failed to fetch appointment statistics",

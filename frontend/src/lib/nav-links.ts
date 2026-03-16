@@ -3,6 +3,8 @@ export const NAV_LINKS = [
     { label: 'Appointment', href: '/appointment', protected: true, role: 'user' },
     { label: 'My Requests', href: '/my-requests', protected: true, role: 'user' },
     { label: 'Register', href: '/doctor-registration', protected: true },
+    { label: 'Hospitals', href: '/hospitals' },
+    { label: 'Register Hospital', href: '/hospital-registration', protected: true },
     { label: 'About', href: '/aboutus' },
     { label: 'Contact', href: '/contact' },
 ];

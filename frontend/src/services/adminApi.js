@@ -74,19 +74,28 @@ export const getDashboardStats = async () => {
   }
 };
 
+export const getAdminStats = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/admin/stats`, {
+      headers: getAuthHeaders(),
+    });
+    return await parseResponse(response);
+  } catch (error) {
+    console.error("Error fetching admin stats:", error);
+    throw error;
+  }
+};
+
 // ============================================
 // DOCTOR REGISTRATION APIs
 // ============================================
 
 export const getDoctorRegistrations = async (status = "PENDING") => {
   try {
-    const response = await fetch(
-      `${BASE_URL}/admin/registrations`,
-      {
-        headers: getAuthHeaders(),
-      }
-      
-    );
+    const url = status ? `${BASE_URL}/admin/registrations?status=${status}` : `${BASE_URL}/admin/registrations`;
+    const response = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
     console.log(response)
     return await parseResponse(response);
   } catch (error) {

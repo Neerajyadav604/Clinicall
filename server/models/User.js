@@ -2,9 +2,16 @@ const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
     
- role: {
+ roles: {
+  type: [String],
+  enum: ["user", "admin", "doctor", "hospital_admin"],
+  default: ["user"],
+},
+
+// Primary role for backward compatibility and quick access
+role: {
   type: String,
-  enum: ["user", "admin", "doctor"],
+  enum: ["user", "admin", "doctor", "hospital_admin"],
   default: "user",
 },
 

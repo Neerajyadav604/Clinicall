@@ -5,6 +5,7 @@ import DoctorDashboard from "../pages/doctor/DoctorDashboard";
 import DoctorProfile from "../pages/doctor/DoctorProfile";
 import DoctorEditProfile from "../pages/doctor/DoctorEditProfile";
 import DoctorAppointments from "../pages/doctor/DoctorAppointments";
+import ClinicalNotes from "../pages/doctor/ClinicalNotes";
 import Chat from "../pages/Chat";
 
 /**
@@ -51,6 +52,14 @@ const DoctorRoutes = () => {
         element={
           <ProtectedRoute requiredRole="doctor">
             <Chat />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/clinical-notes/:appointmentId"
+        element={
+          <ProtectedRoute requiredRole="doctor">
+            <ClinicalNotes />
           </ProtectedRoute>
         }
       />

@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 
 function VerifyEmail() {
   const [otp, setOtp] = useState("");
+  const [error, setError] = useState("");
   const { signupData, loading } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -19,13 +20,18 @@ function VerifyEmail() {
     }
   }, []);
 
-  const handleVerifyAndSignup = (e) => {
+  const handleVerifyAndSignup = async (e) => {
     e.preventDefault();
     if (!signupData) return;
+    if (!otp.trim()) {
+      setError("Enter the 6-digit code.");
+      return;
+    }
 
     const { fullName, contact, email, password } = signupData;
     console.log("navigate:", navigate)
-    dispatch(
+    setError("");
+    const result = await dispatch(
       signup(
         "user",
         fullName,
@@ -36,6 +42,23 @@ function VerifyEmail() {
         navigate
       )
     );
+    if (result && result.success === false) {
+      setError(result.message || "Verification failed. Please try again.");
+    }
+  };
+
+  const handleOtpChange = (value) => {
+    setOtp(value);
+    if (error) setError("");
+  };
+
+  const handleResendOtp = async () => {
+    if (!signupData?.email) return;
+    setError("");
+    const result = await dispatch(sendOtp(signupData.email, navigate));
+    if (result && result.success === false) {
+      setError(result.message || "Unable to resend OTP. Please try again.");
+    }
   };
 
   return (
@@ -56,7 +79,7 @@ function VerifyEmail() {
           <form onSubmit={handleVerifyAndSignup}>
             <OtpInput
               value={otp}
-              onChange={setOtp}
+              onChange={handleOtpChange}
               numInputs={6}
               renderInput={(props) => (
                 <input
@@ -73,6 +96,11 @@ function VerifyEmail() {
                 gap: "0 6px",
               }}
             />
+            {error ? (
+              <div className="error-box mt-3" role="alert" aria-live="polite">
+                {error}
+              </div>
+            ) : null}
             <button
               type="submit"
               className="w-full bg-blue-50 py-[12px] px-[12px] rounded-[8px] mt-6 font-medium text-richblack-900"
@@ -90,7 +118,7 @@ function VerifyEmail() {
 
             <button
               className="flex items-center text-blue-100 gap-x-2"
-              onClick={() => dispatch(sendOtp(signupData.email, navigate))}
+              onClick={handleResendOtp}
             >
               <RxCountdownTimer />
               Resend it

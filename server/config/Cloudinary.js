@@ -1,8 +1,7 @@
 const cloudinary = require('cloudinary').v2
 require('dotenv').config();
 
-exports.connectCloudinary =   ()=>{
-
+const connectCloudinary = ()=>{
 
     try{
         cloudinary.config({
@@ -18,4 +17,8 @@ console.log("Connected to cloudnairy Successfully")
     
 
 }
+
+// Export cloudinary instance and connect function
+module.exports = cloudinary;
+module.exports.connectCloudinary = connectCloudinary;
 

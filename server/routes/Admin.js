@@ -1,11 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const { authenticateUser, isadmin } = require("../middileware/authMiddleware");
+const { authenticateUser, isadmin } = require("../middleware/authMiddleware");
 const {
   // Dashboard
   getDoctorsCount,
   getPendingRegistrationsCount,
   getAppointmentsCount,
+  getAdminStats,
   // Doctor Registrations
   getDoctorRegistrations,
   approveDoctorRegistration,
@@ -34,6 +35,7 @@ router.use(isadmin);
 router.get("/doctors/count", getDoctorsCount);
 router.get("/registrations/pending/count", getPendingRegistrationsCount);
 router.get("/appointments/count", getAppointmentsCount);
+router.get("/stats", getAdminStats);
 
 // ============================================
 // DOCTOR REGISTRATIONS
@@ -62,6 +64,7 @@ router.get("/users", getAllUsers);
 // ============================================
 
 router.get("/doctors/approved", getApprovedDoctors);
+router.get("/doctors", getApprovedDoctors);
 router.get("/doctors/rejected", getRejectedDoctors);
 
 // ============================================

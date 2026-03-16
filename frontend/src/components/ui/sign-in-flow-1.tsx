@@ -523,7 +523,11 @@ export const SignInPage = ({ className }: SignInPageProps) => {
     setIsLoading(true);
     setError(null);
     try {
-      await dispatch(login(email, password, navigate));
+      const result = await dispatch(login(email, password, navigate));
+      if (result && result.success === false) {
+        setError(result.message || "Invalid email or password. Please try again.");
+        return;
+      }
       setStep("success");
       setReverseCanvasVisible(true);
       setTimeout(() => setInitialCanvasVisible(false), 50);

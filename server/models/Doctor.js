@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const fieldEncryption = require('mongoose-field-encryption').fieldEncryption;
 
 const DoctorSchema = new mongoose.Schema(
   {
@@ -80,5 +81,19 @@ ref:"User"
     timestamps: true,
   }
 );
+
+// Field encryption temporarily disabled due to key mismatch with existing database data
+// TODO: Identify original encryption key and re-enable
+// If re-enabling, ensure FIELD_ENC_KEY matches the key used to encrypt licenseNumber and contact fields
+// SECURITY FIX: When re-enabling, do NOT use fallback encryption keys
+/*
+if (!process.env.FIELD_ENC_KEY) {
+  throw new Error('FATAL: FIELD_ENC_KEY environment variable is required for PHI encryption');
+}
+DoctorSchema.plugin(fieldEncryption, {
+  fields: ['licenseNumber', 'contact'],
+  secret: process.env.FIELD_ENC_KEY,
+});
+*/
 
 module.exports = mongoose.model("Doctor", DoctorSchema);

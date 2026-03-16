@@ -44,28 +44,71 @@ exports.getUserProfile = async (req, res) => {
     const userId = req.user.id;
 
     // fetch profile along with base user document
-    const profileDoc = await userProfile
+    let profileDoc = await userProfile
       .findOne({ userId })
       .populate(
         "userId",
-        "fullName email contact role image createdAt updatedAt"
+        "fullName email contact role image createdAt updatedAt roles"
       );
 
+    // If profile doesn't exist, create one
     if (!profileDoc) {
-      return res.status(404).json({
-        success: false,
-        message: "Profile not found",
+      profileDoc = await userProfile.create({
+        userId,
+        dob: null,
+        gender: null,
+        address: null,
+        bloodGroup: null,
+        allergies: [],
+        medicalHistory: [],
+        medications: [],
+        emergencyContact: null,
+        insurance: {
+          provider: null,
+          policyNumber: null
+        }
       });
+
+      // Populate the newly created profile
+      profileDoc = await userProfile.findOne({ userId })
+        .populate("userId", "fullName email contact role image createdAt updatedAt roles");
     }
 
     const userBase = profileDoc.userId.toObject
       ? profileDoc.userId.toObject()
       : profileDoc.userId;
 
+    // Explicitly build complete user object with all profile fields
     const completeUser = {
-      ...userBase,
-      ...profileDoc._doc,
-      additionalDetails: profileDoc._doc,
+      _id: userBase._id,
+      fullName: userBase.fullName,
+      email: userBase.email,
+      contact: userBase.contact,
+      role: userBase.role,
+      roles: userBase.roles,
+      image: userBase.image,
+      createdAt: userBase.createdAt,
+      updatedAt: userBase.updatedAt,
+      dob: profileDoc.dob,
+      gender: profileDoc.gender,
+      address: profileDoc.address,
+      bloodGroup: profileDoc.bloodGroup,
+      allergies: profileDoc.allergies,
+      medicalHistory: profileDoc.medicalHistory,
+      medications: profileDoc.medications,
+      emergencyContact: profileDoc.emergencyContact,
+      insurance: profileDoc.insurance,
+      additionalDetails: {
+        dob: profileDoc.dob,
+        gender: profileDoc.gender,
+        address: profileDoc.address,
+        bloodGroup: profileDoc.bloodGroup,
+        allergies: profileDoc.allergies,
+        medicalHistory: profileDoc.medicalHistory,
+        medications: profileDoc.medications,
+        emergencyContact: profileDoc.emergencyContact,
+        insurance: profileDoc.insurance,
+      }
     };
 
     return res.status(200).json({
@@ -84,8 +127,22 @@ exports.getUserProfile = async (req, res) => {
 };
 
 exports.updateUserProfile = async (req, res) => {
+  const requestId = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  console.log(`[${requestId}] ========== updateUserProfile START ==========`);
+
   try {
+    console.log(`[${requestId}] Step 1: Extracting user ID from request`);
+    console.log(`[${requestId}] req.user:`, JSON.stringify(req.user, null, 2));
+
     const userId = req.user.id;
+    console.log(`[${requestId}] Extracted userId: ${userId}`);
+
+    if (!userId) {
+      console.error(`[${requestId}] ERROR: userId is undefined or null`);
+    }
+
+    console.log(`[${requestId}] Step 2: Extracting fields from req.body`);
+    console.log(`[${requestId}] Raw req.body:`, JSON.stringify(req.body, null, 2));
 
     const {
       dob,
@@ -96,12 +153,27 @@ exports.updateUserProfile = async (req, res) => {
       medicalHistory,
       medications,
       emergencyContact,
-      insurance
+      insuranceProvider,
+      policyNumber
     } = req.body;
 
-    // Build update object explicitly
+    console.log(`[${requestId}] Destructured fields:`, {
+      dob: dob !== undefined ? dob : "NOT PROVIDED",
+      gender: gender !== undefined ? gender : "NOT PROVIDED",
+      address: address !== undefined ? address : "NOT PROVIDED",
+      bloodGroup: bloodGroup !== undefined ? bloodGroup : "NOT PROVIDED",
+      allergies: allergies !== undefined ? allergies : "NOT PROVIDED",
+      medicalHistory: medicalHistory !== undefined ? medicalHistory : "NOT PROVIDED",
+      medications: medications !== undefined ? medications : "NOT PROVIDED",
+      emergencyContact: emergencyContact !== undefined ? emergencyContact : "NOT PROVIDED",
+      insuranceProvider: insuranceProvider !== undefined ? insuranceProvider : "NOT PROVIDED",
+      policyNumber: policyNumber !== undefined ? policyNumber : "NOT PROVIDED",
+    });
+
+    console.log(`[${requestId}] Step 3: Building updateData object`);
     const updateData = {
-      ...(dob !== undefined && { dob }),
+      userId: userId,
+      ...(dob !== undefined && dob !== "" ? { dob: new Date(dob) } : {}),
       ...(gender !== undefined && { gender }),
       ...(address !== undefined && { address }),
       ...(bloodGroup !== undefined && { bloodGroup }),
@@ -109,42 +181,94 @@ exports.updateUserProfile = async (req, res) => {
       ...(medicalHistory !== undefined && { medicalHistory }),
       ...(medications !== undefined && { medications }),
       ...(emergencyContact !== undefined && { emergencyContact }),
-      ...(insurance !== undefined && { insurance })
+      ...(insuranceProvider !== undefined || policyNumber !== undefined ? {
+        insurance: {
+          provider: insuranceProvider || null,
+          policyNumber: policyNumber || null
+        }
+      } : {})
     };
 
-    const updatedProfile = await userProfile.findOneAndUpdate(
-      { userId },
-      { $set: updateData },
-      { new: true, runValidators: true }
-    ).populate('userId', 'fullName email contact role image createdAt'); // ✅ POPULATE USER DATA
+    console.log(`[${requestId}] Built updateData:`, JSON.stringify(updateData, null, 2));
 
-    if (!updatedProfile) {
-      return res.status(404).json({
-        success: false,
-        message: "Profile not found"
-      });
+    if (Object.keys(updateData).length === 0) {
+      console.warn(`[${requestId}] WARNING: updateData is empty — no fields will be updated`);
     }
 
-    // ✅ RETURN COMPLETE USER OBJECT WITH ALL FIELDS
-    const completeUser = {
-      _id: updatedProfile.userId._id,
-      fullName: updatedProfile.userId.fullName,
-      email: updatedProfile.userId.email,
-      contact: updatedProfile.userId.contact,
-      role: updatedProfile.userId.role,
-      image: updatedProfile.userId.image,  // ✅ IMAGE IS INCLUDED
-      createdAt: updatedProfile.userId.createdAt,
-      // Additional details from userProfile
-      dob: updatedProfile.dob,
-      gender: updatedProfile.gender,
-      address: updatedProfile.address,
-      bloodGroup: updatedProfile.bloodGroup,
-      allergies: updatedProfile.allergies,
-      medicalHistory: updatedProfile.medicalHistory,
-      medications: updatedProfile.medications,
-      emergencyContact: updatedProfile.emergencyContact,
-      insurance: updatedProfile.insurance,
-      additionalDetails: {
+    console.log(`[${requestId}] Step 4: Fetching existing profile for userId: ${userId}`);
+    try {
+      let profileDoc = await userProfile.findOne({ userId });
+      
+      if (!profileDoc) {
+        console.log(`[${requestId}] Creating new profile for userId: ${userId}`);
+        profileDoc = new userProfile({ userId });
+      }
+
+      console.log(`[${requestId}] Applying updates to profile`);
+      // Apply all updates to the document
+      Object.keys(updateData).forEach(key => {
+        if (key !== 'userId') {
+          profileDoc[key] = updateData[key];
+        }
+      });
+
+      console.log(`[${requestId}] Saving profile to database`);
+      const savedDoc = await profileDoc.save();
+      
+      // Now populate and fetch to get full data
+      const updatedProfile = await userProfile.findById(savedDoc._id)
+        .populate('userId', 'fullName email contact role roles image createdAt updatedAt');
+
+      console.log(`[${requestId}] DB query completed`);
+      console.log(`[${requestId}] updatedProfile after DB save:`, {
+        userId: updatedProfile.userId,
+        dob: updatedProfile.dob,
+        gender: updatedProfile.gender,
+        address: updatedProfile.address,
+        bloodGroup: updatedProfile.bloodGroup,
+        emergencyContact: updatedProfile.emergencyContact,
+        allergies: updatedProfile.allergies,
+        medications: updatedProfile.medications,
+        medicalHistory: updatedProfile.medicalHistory,
+        insurance: updatedProfile.insurance
+      });
+
+      if (!updatedProfile) {
+        console.warn(`[${requestId}] WARNING: No profile found for userId: ${userId}`);
+        return res.status(404).json({
+          success: false,
+          message: "Profile not found"
+        });
+      }
+
+      console.log(`[${requestId}] Step 5: Checking populated userId field`);
+      console.log(`[${requestId}] updatedProfile.userId:`, JSON.stringify(updatedProfile.userId, null, 2));
+
+      if (!updatedProfile.userId) {
+        console.error(`[${requestId}] ERROR: populate failed — updatedProfile.userId is null/undefined`);
+      } else {
+        console.log(`[${requestId}] Populated user fields present:`, {
+        _id: updatedProfile.userId._id,
+        fullName: updatedProfile.userId.fullName,
+        email: updatedProfile.userId.email,
+        contact: updatedProfile.userId.contact,
+        role: updatedProfile.userId.role,
+        image: updatedProfile.userId.image ?? "IMAGE IS NULL/UNDEFINED",
+        createdAt: updatedProfile.userId.createdAt,
+      });
+      }
+
+      console.log(`[${requestId}] Step 6: Building completeUser response object`);
+      const completeUser = {
+        _id: updatedProfile.userId._id,
+        fullName: updatedProfile.userId.fullName,
+        email: updatedProfile.userId.email,
+        contact: updatedProfile.userId.contact,
+        role: updatedProfile.userId.role,
+        roles: updatedProfile.userId.roles,
+        image: updatedProfile.userId.image,
+        createdAt: updatedProfile.userId.createdAt,
+        updatedAt: updatedProfile.userId.updatedAt,
         dob: updatedProfile.dob,
         gender: updatedProfile.gender,
         address: updatedProfile.address,
@@ -153,18 +277,43 @@ exports.updateUserProfile = async (req, res) => {
         medicalHistory: updatedProfile.medicalHistory,
         medications: updatedProfile.medications,
         emergencyContact: updatedProfile.emergencyContact,
-        insurance: updatedProfile.insurance
-      }
-    };
+        insurance: updatedProfile.insurance,
+        additionalDetails: {
+          dob: updatedProfile.dob,
+          gender: updatedProfile.gender,
+          address: updatedProfile.address,
+          bloodGroup: updatedProfile.bloodGroup,
+          allergies: updatedProfile.allergies,
+          medicalHistory: updatedProfile.medicalHistory,
+          medications: updatedProfile.medications,
+          emergencyContact: updatedProfile.emergencyContact,
+          insurance: updatedProfile.insurance
+        }
+      };
 
-    return res.status(200).json({
-      success: true,
-      message: "Profile updated successfully",
-      userprofile: completeUser  // ✅ COMPLETE USER WITH IMAGE
-    });
+      console.log(`[${requestId}] Built completeUser:`, JSON.stringify(completeUser, null, 2));
+
+      console.log(`[${requestId}] Step 7: Sending 200 response`);
+      console.log(`[${requestId}] ========== updateUserProfile SUCCESS ==========`);
+
+      return res.status(200).json({
+        success: true,
+        message: "Profile updated successfully",
+        userprofile: completeUser
+      });
+    } catch (dbError) {
+      console.error(`[${requestId}] ERROR during profile save:`, dbError.message);
+      console.error(`[${requestId}] DB error stack:`, dbError.stack);
+      throw dbError;
+    }
 
   } catch (error) {
-    console.error(error);
+    console.error(`[${requestId}] ========== updateUserProfile FAILED ==========`);
+    console.error(`[${requestId}] Error message:`, error.message);
+    console.error(`[${requestId}] Error name:`, error.name);
+    console.error(`[${requestId}] Error stack:`, error.stack);
+    console.error(`[${requestId}] Full error object:`, JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+
     return res.status(500).json({
       success: false,
       message: "Failed to update profile"
@@ -248,6 +397,13 @@ exports.updateuserDisplayPicture = async (req, res) => {
         message: "Authentication failed - user not found in request"
       });
     }
+
+    if (!req.files || !req.files.displayPicture) {
+      return res.status(400).json({
+        success: false,
+        message: "Display picture is required",
+      });
+    }
     
     const displayPicture = req.files.displayPicture;
     const userId = req.user._id; // extract from authenticated request
@@ -260,6 +416,14 @@ exports.updateuserDisplayPicture = async (req, res) => {
     );
     
     console.log("Uploaded image:", image);
+    console.log("Saved image URL:", image?.secure_url);
+
+    if (!image?.secure_url) {
+      return res.status(500).json({
+        success: false,
+        message: "Image upload failed",
+      });
+    }
     
     // ✅ Update the User model, not userProfile
     const User = require('../models/User'); // Make sure to require User model
@@ -275,14 +439,14 @@ exports.updateuserDisplayPicture = async (req, res) => {
 
     // ✅ Combine everything
     const completeUser = {
+      ...additionalDetails?._doc,
       _id: updatedUser._id,
       fullName: updatedUser.fullName,
       email: updatedUser.email,
       contact: updatedUser.contact,
       role: updatedUser.role,
-      image: updatedUser.image,  // ✅ UPDATED IMAGE
+      image: updatedUser.image,
       createdAt: updatedUser.createdAt,
-      ...additionalDetails?._doc,  // Spread additional details
       additionalDetails: additionalDetails?._doc || {}
     };
 

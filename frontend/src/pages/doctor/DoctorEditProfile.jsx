@@ -15,6 +15,9 @@ const DoctorEditProfile = () => {
   const [submitting, setSubmitting] = useState(false);
   const [profile, setProfile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [loadError, setLoadError] = useState("");
+  const [formError, setFormError] = useState("");
+  const [imageError, setImageError] = useState("");
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -61,8 +64,7 @@ const DoctorEditProfile = () => {
         }
       } catch (error) {
         console.error("Error fetching doctor profile:", error);
-        toast.error("Failed to load profile for editing");
-        navigate("/doctor/profile");
+        setLoadError("Failed to load profile for editing.");
       } finally {
         setLoading(false);
       }
@@ -77,21 +79,24 @@ const DoctorEditProfile = () => {
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
+    if (formError) setFormError("");
   };
 
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (imageError) setImageError("");
+    if (formError) setFormError("");
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      toast.error("Please select a valid image file");
+      setImageError("Please select a valid image file.");
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image size should be less than 5MB");
+      setImageError("Image size should be less than 5MB.");
       return;
     }
 
@@ -140,11 +145,12 @@ const DoctorEditProfile = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error("Please fill in all required fields");
+      setFormError("Please fill in all required fields.");
       return;
     }
 
     try {
+      setFormError("");
       setSubmitting(true);
       const toastId = toast.loading("Updating profile...");
 
@@ -189,7 +195,7 @@ const DoctorEditProfile = () => {
           }
         } catch (imageError) {
           console.error("Image upload error:", imageError);
-          toast.error("Image upload failed: " + imageError.message);
+          setImageError(`Image upload failed: ${imageError.message}`);
           return; // Stop if image upload fails
         }
       }
@@ -214,7 +220,7 @@ const DoctorEditProfile = () => {
       }
     } catch (error) {
       console.error("Error updating profile:", error);
-      toast.error(error.message || "Failed to update profile");
+      setFormError(error.message || "Failed to update profile");
     } finally {
       setSubmitting(false);
       toast.dismiss();
@@ -231,6 +237,25 @@ const DoctorEditProfile = () => {
     );
   }
 
+  if (loadError) {
+    return (
+      <DoctorLayout>
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="error-box" role="alert" aria-live="polite">
+            {loadError}
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/doctor/profile")}
+            className="mt-4 px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            Back to Profile
+          </button>
+        </div>
+      </DoctorLayout>
+    );
+  }
+
   return (
     <DoctorLayout>
       <div className="space-y-6">
@@ -241,6 +266,11 @@ const DoctorEditProfile = () => {
             Update your professional information and profile picture
           </p>
         </div>
+        {formError ? (
+          <div className="error-box" role="alert" aria-live="polite">
+            {formError}
+          </div>
+        ) : null}
 
         {/* Edit Profile Form */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -303,6 +333,11 @@ const DoctorEditProfile = () => {
                 <p className="text-gray-600 text-sm mt-3">
                   Click the camera icon to change your profile picture
                 </p>
+                {imageError ? (
+                  <div className="error-box mt-3" role="alert" aria-live="polite">
+                    {imageError}
+                  </div>
+                ) : null}
               </div>
 
               {/* Form Grid */}
@@ -320,7 +355,7 @@ const DoctorEditProfile = () => {
                     className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       errors.fullName ? "border-red-500" : "border-gray-300"
                     }`}
-                    placeholder="Dr. John Doe"
+                    placeholder="Enter your full name"
                   />
                   {errors.fullName && (
                     <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>

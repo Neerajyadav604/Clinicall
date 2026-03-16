@@ -39,6 +39,16 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       path: "/admin/rejected-doctors",
       icon: <HiOutlineXCircle className="w-6 h-6" />,
     },
+    {
+      name: "Hospital Registrations",
+      path: "/admin/hospital-registrations",
+      icon: <HiOutlineDocumentText className="w-6 h-6" />,
+    },
+    {
+      name: "Approved Hospitals",
+      path: "/admin/hospitals",
+      icon: <HiOutlineCheckCircle className="w-6 h-6" />,
+    },
   ];
 
   return (

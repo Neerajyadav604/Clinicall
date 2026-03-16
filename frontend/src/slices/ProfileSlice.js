@@ -10,9 +10,27 @@ const profileSlice = createSlice({
     initialState: initialState,
     reducers: {
         setUser(state, action) {
-            state.user = action.payload;
-            if (action.payload) {
-                localStorage.setItem("user", JSON.stringify(action.payload));
+            let userData = action.payload;
+            
+            if (userData) {
+                // Normalize role data to ensure consistency
+                if (!userData.roles && userData.role) {
+                    userData.roles = [userData.role.toLowerCase()];
+                } else if (userData.roles && Array.isArray(userData.roles)) {
+                    userData.roles = userData.roles.map(r => 
+                        typeof r === 'string' ? r.toLowerCase() : r
+                    );
+                }
+                if (userData.role && typeof userData.role === 'string') {
+                    userData.role = userData.role.toLowerCase();
+                }
+                
+                console.log("ProfileSlice - Setting user with normalized roles:", userData);
+            }
+            
+            state.user = userData;
+            if (userData) {
+                localStorage.setItem("user", JSON.stringify(userData));
             } else {
                 localStorage.removeItem("user"); // ✅ clean up on logout
             }

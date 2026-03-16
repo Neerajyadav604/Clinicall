@@ -34,11 +34,11 @@ const RejectedDoctors = () => {
     { key: "specialization", label: "Specialization" },
     { key: "experienceYears", label: "Experience (Years)" },
     { key: "licenseNumber", label: "License Number" },
-    { key: "rejectionReason", label: "Rejection Reason" },
+    { key: "adminRemarks", label: "Rejection Reason" },
     {
-      key: "rejectedAt",
+      key: "reviewedAt",
       label: "Rejected Date",
-      render: (value) => new Date(value).toLocaleDateString(),
+      render: (value) => (value ? new Date(value).toLocaleDateString() : "N/A"),
     },
   ];
 

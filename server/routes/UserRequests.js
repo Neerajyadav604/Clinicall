@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const { authenticateUser } = require("../middileware/authMiddleware");
+const { authenticateUser } = require("../middleware/authMiddleware");
 const Appointment = require("../models/Appointment");
 const User = require("../models/User");
 const Doctor = require("../models/Doctor");
+const { sendNotification } = require("../utils/sendNotification");
 
 // ============================================
 // USER APPOINTMENT/REQUEST ENDPOINTS
@@ -166,6 +167,31 @@ router.patch("/user/appointments/:appointmentId/cancel", authenticateUser, async
 
     await appointment.save();
 
+    try {
+      const doctor = await Doctor.findById(appointment.doctorId);
+      const doctorName = doctor?.fullName || "Doctor";
+      await sendNotification({
+        recipient: appointment.userId,
+        type: "APPOINTMENT_CANCELLED",
+        title: "Appointment Cancelled",
+        message: `Your appointment with Dr. ${doctorName} on ${new Date(
+          appointment.appointmentDate
+        ).toLocaleDateString()} has been cancelled.`,
+      });
+      if (doctor?.user) {
+        await sendNotification({
+          recipient: doctor.user,
+          type: "APPOINTMENT_CANCELLED",
+          title: "Appointment Cancelled",
+          message: `${req.user.fullName}'s appointment on ${new Date(
+            appointment.appointmentDate
+          ).toLocaleDateString()} has been cancelled.`,
+        });
+      }
+    } catch (notifyErr) {
+      console.error("Failed to send cancellation notifications:", notifyErr);
+    }
+
     // Populate for response
     const updatedAppointment = await Appointment.findById(appointmentId)
       .populate("doctorId", "fullName specialization image");
@@ -231,7 +257,8 @@ router.patch("/user/appointments/:appointmentId/consultation-mode", authenticate
     // If setting offline mode, no payment needed
     if (consultationMode === "offline") {
       appointment.consultationMode = "offline";
-      appointment.paymentStatus = "unpaid"; // No payment for offline
+      appointment.paymentStatus = "unpaid";
+      appointment.consultationStatus = "locked";
       appointment.isChatEnabled = false;
     } else {
       // For online mode, payment will be required
@@ -292,6 +319,7 @@ router.get("/user/appointments/:appointmentId/chat-access", authenticateUser, as
     const canAccess =
       appointment.approvalstatus === "APPROVED" &&
       appointment.paymentStatus === "paid" &&
+      appointment.consultationStatus === "active" &&
       appointment.consultationMode === "online";
 
     if (!canAccess) {
@@ -303,12 +331,15 @@ router.get("/user/appointments/:appointmentId/chat-access", authenticateUser, as
           approvalstatus: appointment.approvalstatus,
           paymentStatus: appointment.paymentStatus,
           consultationMode: appointment.consultationMode,
+          consultationStatus: appointment.consultationStatus,
         },
         reason:
           appointment.approvalstatus !== "APPROVED"
             ? "Appointment not approved"
             : appointment.paymentStatus !== "paid"
             ? "Payment not completed"
+            : appointment.consultationStatus !== "active"
+            ? "Consultation not active"
             : "Consultation mode not set to online",
       });
     }
@@ -332,6 +363,45 @@ router.get("/user/appointments/:appointmentId/chat-access", authenticateUser, as
       canAccess: false,
       error: error.message,
     });
+  }
+});
+
+/**
+ * GET /api/v1/appointments/:appointmentId/consultation-status
+ * Check payment + consultation access for both user and doctor
+ */
+router.get("/appointments/:appointmentId/consultation-status", authenticateUser, async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    const appointment = await Appointment.findById(appointmentId);
+
+    if (!appointment) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    const userId = req.user.id;
+    const isDoctorRole = req.user.role === "doctor";
+
+    if (isDoctorRole) {
+      const doctor = await Doctor.findOne({ user: userId });
+      if (!doctor || appointment.doctorId.toString() !== doctor._id.toString()) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+    } else {
+      if (appointment.userId.toString() !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+    }
+
+    return res.json({
+      paymentStatus: appointment.paymentStatus,
+      consultationStatus: appointment.consultationStatus,
+      canAccess:
+        appointment.paymentStatus === "paid" &&
+        appointment.consultationStatus === "active",
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
   }
 });
 
