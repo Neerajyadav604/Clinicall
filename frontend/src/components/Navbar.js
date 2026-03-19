@@ -100,6 +100,8 @@ const Navbar = () => {
 
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
+          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMenuOpen}
           className="lg:hidden p-2 rounded-full hover:bg-gray-100 transition"
         >
           <svg

@@ -43,11 +43,16 @@ const DocumentVault = ({ patientId, isDoctor = false }) => {
   const loadDocuments = async (filterParams = {}) => {
     try {
       dispatch(setDocumentsLoading(true));
+      dispatch(setDocumentsError(null));
       const response = await getDocuments(patientId, filterParams);
       const docsList = response?.entry?.map(e => e.resource) || [];
       dispatch(setDocuments(docsList));
     } catch (error) {
-      dispatch(setDocumentsError(error.message));
+      const message = error?.response?.status === 403
+        ? "You don't have permission to view these documents."
+        : (error.message || 'Failed to load documents');
+      dispatch(setDocuments([]));
+      dispatch(setDocumentsError(message));
     } finally {
       dispatch(setDocumentsLoading(false));
     }
@@ -148,7 +153,13 @@ const DocumentVault = ({ patientId, isDoctor = false }) => {
   const canUpload = isDoctor || profileState?.user?.role === 'doctor';
 
   return (
-    <div className="rounded-[20px] border border-[var(--line)] bg-[var(--surface)] p-6 shadow-[0_16px_34px_-26px_rgba(2,6,23,0.45)]">
+    <div 
+      className="rounded-[20px] border bg-white p-6 shadow-[0_16px_34px_-26px_rgba(2,6,23,0.45)]"
+      style={{
+        borderColor: "#d9e2ec",
+        backgroundColor: "#ffffff"
+      }}
+    >
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">My Documents</h3>

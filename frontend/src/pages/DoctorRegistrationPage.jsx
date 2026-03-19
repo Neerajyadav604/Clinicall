@@ -16,12 +16,11 @@ const SPECIALIZATIONS = [
 // ─── Helpers ───────────────────────────────────────────────────
 
 const inputCls = (err) =>
-  "w-full border " + (err ? "border-red-400 bg-red-50" : "border-gray-200") +
-  " rounded-lg px-3 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition";
+  "w-full border rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition min-h-[44px] " + (err ? "border-red-400 bg-red-50" : "border-gray-200 bg-white");
 
 const InputField = ({ label, required, error, children }) => (
   <div>
-    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
+    <label className="block text-xs font-semibold text-gray-500 mb-1.5 sm:mb-2 uppercase tracking-wide">
       {label}{required && <span className="text-red-500 ml-0.5">*</span>}
     </label>
     {children}
@@ -39,11 +38,11 @@ const SectionHeader = ({ children }) => (
 // ─── Stepper ───────────────────────────────────────────────────
 
 const Stepper = ({ steps, current }) => (
-  <div className="flex items-start justify-center px-2">
+  <div className="flex items-start justify-start sm:justify-center px-2 overflow-x-auto gap-1 sm:gap-2">
     {steps.map((step, i) => (
       <React.Fragment key={i}>
-        <div className="flex flex-col items-center">
-          <div className={"w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all " + (
+        <div className="flex flex-col items-center flex-shrink-0">
+          <div className={"w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold border-2 transition-all " + (
             i < current
               ? "bg-emerald-500 border-emerald-500 text-white"
               : i === current
@@ -51,19 +50,19 @@ const Stepper = ({ steps, current }) => (
               : "bg-white border-gray-300 text-gray-400"
           )}>
             {i < current ? (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
             ) : i + 1}
           </div>
-          <span className={"mt-1.5 text-[10px] font-semibold uppercase tracking-wide " + (
+          <span className={"mt-1 text-[8px] sm:text-[10px] font-semibold uppercase tracking-wide text-center max-w-[60px] " + (
             i === current ? "text-emerald-600" : i < current ? "text-emerald-500" : "text-gray-400"
           )}>
             {step}
           </span>
         </div>
         {i < steps.length - 1 && (
-          <div className={"flex-1 h-0.5 mx-2 mt-4 " + (i < current ? "bg-emerald-500" : "bg-gray-200")} />
+          <div className={"hidden sm:flex flex-1 h-0.5 mx-1 sm:mx-2 mt-4 flex-shrink-0 w-4 sm:w-auto " + (i < current ? "bg-emerald-500" : "bg-gray-200")} />
         )}
       </React.Fragment>
     ))}
@@ -73,45 +72,45 @@ const Stepper = ({ steps, current }) => (
 // ─── Page Header ───────────────────────────────────────────────
 
 const PageHeader = ({ right }) => (
-  <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between">
-    <div className="flex items-center gap-2">
-      <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-        <span className="text-white font-extrabold text-sm">C</span>
+  <div className="bg-white border-b border-gray-100 px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2">
+    <div className="flex items-center gap-2 min-w-0">
+      <div className="w-7 h-7 sm:w-8 sm:h-8 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
+        <span className="text-white font-extrabold text-xs sm:text-sm">C</span>
       </div>
-      <span className="font-bold text-gray-900 text-base">Clinicall</span>
+      <span className="font-bold text-gray-900 text-sm sm:text-base truncate">Clinicall</span>
     </div>
-    {right && <span className="text-sm text-gray-500">{right}</span>}
+    {right && <span className="text-xs sm:text-sm text-gray-500 flex-shrink-0">{right}</span>}
   </div>
 );
 
 // ─── Registration Summary Panel ────────────────────────────────
 
 const DoctorSummary = ({ form, currentStep, imagePreview }) => (
-  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sticky top-4">
-    <h3 className="text-sm font-bold text-gray-900 mb-4">Application Summary</h3>
+  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5 sticky top-4">
+    <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-4">Application Summary</h3>
 
     {/* Avatar */}
     <div className="flex flex-col items-center mb-4">
-      <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-emerald-300 bg-emerald-50 flex items-center justify-center">
+      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-emerald-300 bg-emerald-50 flex items-center justify-center flex-shrink-0">
         {imagePreview
           ? <img src={imagePreview} alt="profile" className="w-full h-full object-cover" />
           : (
-            <svg className="w-8 h-8 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           )
         }
       </div>
-      {form.fullName && <p className="text-xs font-bold text-gray-800 mt-2">{form.fullName}</p>}
+      {form.fullName && <p className="text-xs font-bold text-gray-800 mt-2 text-center">{form.fullName}</p>}
       {form.specialization && <p className="text-[11px] text-emerald-600 mt-0.5">{form.specialization}</p>}
     </div>
 
-    <div className="space-y-2 text-xs">
+    <div className="space-y-1.5 sm:space-y-2 text-xs">
       {form.email && (
         <div className="flex items-start justify-between gap-2">
           <span className="text-gray-400 flex-shrink-0">Email</span>
-          <span className="font-medium text-gray-700 text-right break-all max-w-[140px]">{form.email}</span>
+          <span className="font-medium text-gray-700 text-right break-all max-w-[120px] text-[11px]">{form.email}</span>
         </div>
       )}
       {form.contact && (
@@ -123,7 +122,7 @@ const DoctorSummary = ({ form, currentStep, imagePreview }) => (
       {form.qualification && (
         <div className="flex items-start justify-between gap-2">
           <span className="text-gray-400 flex-shrink-0">Qualification</span>
-          <span className="font-medium text-gray-700 text-right max-w-[140px]">{form.qualification}</span>
+          <span className="font-medium text-gray-700 text-right max-w-[120px]">{form.qualification}</span>
         </div>
       )}
       {form.experienceYears !== "" && (
@@ -135,18 +134,18 @@ const DoctorSummary = ({ form, currentStep, imagePreview }) => (
       {form.licenseNumber && (
         <div className="flex items-center justify-between gap-2">
           <span className="text-gray-400">License</span>
-          <span className="font-medium text-gray-700 font-mono text-[11px]">{form.licenseNumber}</span>
+          <span className="font-medium text-gray-700 font-mono text-[10px]">{form.licenseNumber}</span>
         </div>
       )}
       {form.hospitalName && (
         <div className="flex items-start justify-between gap-2">
           <span className="text-gray-400 flex-shrink-0">Hospital</span>
-          <span className="font-medium text-gray-700 text-right max-w-[140px]">{form.hospitalName}</span>
+          <span className="font-medium text-gray-700 text-right max-w-[120px]">{form.hospitalName}</span>
         </div>
       )}
     </div>
 
-    <div className="mt-5 pt-4 border-t border-gray-100">
+    <div className="mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-gray-100">
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-bold text-gray-600">Progress</span>
         <span className="text-xs text-emerald-600 font-bold">Step {currentStep} of 3</span>
@@ -406,7 +405,7 @@ const DoctorRegistrationPage = () => {
           <div className="flex gap-6 items-start">
 
             {/* ── Main Panel ── */}
-            <div className="flex-1 min-w-0 bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+            <div className="flex-1 min-w-0 bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 md:p-8">
               {submitError ? (
                 <div className="error-box mb-4" role="alert" aria-live="polite">
                   {submitError}
@@ -417,8 +416,8 @@ const DoctorRegistrationPage = () => {
               {currentStep === 1 && (
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900">Personal Information</h2>
-                    <p className="text-sm text-gray-500 mt-1">Tell us about yourself.</p>
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Personal Information</h2>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">Tell us about yourself.</p>
                   </div>
 
                   {/* Profile Photo */}
@@ -686,7 +685,7 @@ const DoctorRegistrationPage = () => {
           </div>
 
           {/* Navigation */}
-          <div className="flex justify-between mt-6">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 mt-6">
             <button
               type="button"
               onClick={currentStep === 1 ? () => navigate(-1) : handleBack}

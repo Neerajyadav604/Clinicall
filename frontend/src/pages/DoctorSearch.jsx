@@ -1,5 +1,8 @@
 import React, { useState } from "react";
+import { useSelector } from "react-redux";
 import { searchDoctors, requestAppointment } from "../services/operations/SearchApi";
+import { selectRecommendedDoctors } from "../slices/mlSlice";
+import DoctorMatchCard from "../components/ai/DoctorMatchCard";
 
 const mapStatus = (s) => {
   if (!s) return "Book Appointment";
@@ -13,6 +16,7 @@ const mapStatus = (s) => {
 };
 
 export default function DoctorSearch() {
+  const recommendedDoctors = useSelector(selectRecommendedDoctors);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [doctors, setDoctors] = useState([]);
@@ -21,6 +25,12 @@ export default function DoctorSearch() {
   const [bookingData, setBookingData] = useState({ appointmentDate: "", appointmentTime: "", reason: "" });
 
   const token = localStorage.getItem("token");
+
+  // Helper: check if a doctor is AI-recommended
+  const getAIMatch = (doctorId) =>
+    recommendedDoctors.find(
+      (r) => r.doctorId === String(doctorId)
+    );
 
   const handleSearch = async () => {
     setError(null);
@@ -94,6 +104,34 @@ export default function DoctorSearch() {
 
       {error && <div className="mt-4 text-red-600">{error}</div>}
 
+      {/* AI Recommended Doctors Panel */}
+      {recommendedDoctors.length > 0 && (
+        <div className="mt-6 mb-8 bg-purple-50 border border-purple-200 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-purple-600 text-xl">🤖</span>
+            <div>
+              <h3 className="font-semibold text-purple-900">
+                AI Recommended Doctors
+              </h3>
+              <p className="text-xs text-purple-600">
+                Based on your symptom analysis
+              </p>
+            </div>
+          </div>
+          <div className="space-y-3">
+            {recommendedDoctors.map((doctor) => (
+              <DoctorMatchCard
+                key={doctor.doctorId}
+                doctor={doctor}
+                onBook={(id) => openBooking(id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {error && <div className="mt-4 text-red-600">{error}</div>}
+
       {/* Empty state before search */}
       {doctors.length === 0 && !loading && !error && query.trim() === "" && (
         <div className="mt-6 p-8 rounded-lg border border-dashed border-gray-200 text-center bg-white">
@@ -121,7 +159,17 @@ export default function DoctorSearch() {
               )}
 
               <div>
-                <div className="text-lg font-semibold">{doc.fullName}</div>
+                <div className="text-lg font-semibold flex items-center gap-2">
+                  {doc.fullName}
+                  {(() => {
+                    const aiMatch = getAIMatch(doc._id);
+                    return aiMatch ? (
+                      <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                        🤖 AI Match: {aiMatch.matchPercentage}%
+                      </span>
+                    ) : null;
+                  })()}
+                </div>
                 <div className="text-sm text-gray-600">{doc.specialization} • {doc.experienceYears ?? 'N/A'} yrs</div>
               </div>
             </div>

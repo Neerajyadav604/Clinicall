@@ -28,48 +28,50 @@ const TableComponent = ({ columns, data, loading }) => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        {/* Table Header */}
-        <thead className="bg-gray-50 border-b border-gray-200">
-          <tr>
-            {columns.map((column) => (
-              <th
-                key={column.key}
-                className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider"
-              >
-                {column.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-
-        {/* Table Body */}
-        <tbody className="bg-white divide-y divide-gray-200">
-          {data.map((row, rowIndex) => (
-            <tr
-              key={rowIndex}
-              className="hover:bg-gray-50 transition-colors duration-150"
-            >
+    <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full divide-y divide-gray-200">
+          {/* Table Header */}
+          <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
+            <tr>
               {columns.map((column) => (
-                <td
-                  key={`${rowIndex}-${column.key}`}
-                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                <th
+                  key={column.key}
+                  className="px-3 sm:px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap"
                 >
-                  {column.render
-                    ? column.render(row[column.key], row)
-                    : row[column.key]}
-                </td>
+                  {column.label}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+
+          {/* Table Body */}
+          <tbody className="bg-white divide-y divide-gray-200">
+            {data.map((row, rowIndex) => (
+              <tr
+                key={rowIndex}
+                className="hover:bg-gray-50 transition-colors duration-150"
+              >
+                {columns.map((column) => (
+                  <td
+                    key={`${rowIndex}-${column.key}`}
+                    className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900"
+                  >
+                    {column.render
+                      ? column.render(row[column.key], row)
+                      : row[column.key]}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {/* Footer */}
-      <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-        <p className="text-xs text-gray-500">
-          Showing {data.length} result{data.length !== 1 ? "s" : ""}
+      <div className="bg-gray-50 px-3 sm:px-6 py-3 border-t border-gray-200">
+        <p className="text-xs text-gray-600">
+          Showing <span className="font-semibold">{data.length}</span> result{data.length !== 1 ? "s" : ""}
         </p>
       </div>
     </div>

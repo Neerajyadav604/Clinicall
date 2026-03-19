@@ -1,5 +1,92 @@
 const Consent = require("../models/Consent");
 
+const normalizePatientId = (value) => {
+  if (!value) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  if (raw.startsWith("Patient/")) {
+    return raw.split("/")[1] || null;
+  }
+
+  return raw;
+};
+
+const getNormalizedRoles = (user, fallbackRole) => {
+  if (Array.isArray(user?.roles) && user.roles.length > 0) {
+    return user.roles
+      .filter((role) => typeof role === "string" && role.trim())
+      .map((role) => role.toLowerCase());
+  }
+
+  if (typeof user?.role === "string" && user.role.trim()) {
+    return [user.role.toLowerCase()];
+  }
+
+  if (typeof fallbackRole === "string" && fallbackRole.trim()) {
+    return [fallbackRole.toLowerCase()];
+  }
+
+  return [];
+};
+
+const getPatientIdsFromAuthContext = (req) => {
+  const ids = new Set();
+
+  const addCandidate = (value) => {
+    const normalized = normalizePatientId(value);
+    if (normalized) {
+      ids.add(normalized);
+    }
+  };
+
+  addCandidate(req.user?._id);
+  addCandidate(req.user?.id);
+  addCandidate(req.userId);
+  addCandidate(req.auth?.tokenSubjectId);
+  addCandidate(req.auth?.patientId);
+
+  if (req.auth?.fhirUser) {
+    addCandidate(req.auth.fhirUser);
+  }
+
+  return ids;
+};
+
+const getPatientIdsFromTokenClaims = (req) => {
+  const ids = new Set();
+
+  const addCandidate = (value) => {
+    const normalized = normalizePatientId(value);
+    if (normalized) {
+      ids.add(normalized);
+    }
+  };
+
+  addCandidate(req.auth?.patientId);
+  addCandidate(req.auth?.fhirUser);
+
+  return ids;
+};
+
+const hasReadScopeForResource = (scopes, resourceType) => {
+  if (!Array.isArray(scopes) || !resourceType) return false;
+
+  const acceptedScopes = new Set([
+    `patient/${resourceType}.read`,
+    `patient/*.read`,
+    "patient/read",
+    `user/${resourceType}.read`,
+    `user/*.read`,
+    "user/read",
+    `system/${resourceType}.read`,
+    `system/*.read`,
+    "system/read",
+  ]);
+
+  return scopes.some((scope) => acceptedScopes.has(scope));
+};
+
 /**
  * Middleware to check if requester has consent to access patient's FHIR resource
  * Rules:
@@ -11,33 +98,48 @@ const Consent = require("../models/Consent");
 const consentMiddleware = async (req, res, next) => {
   try {
     // Determine the patient we're querying for
-    const patientId = req.query.patient || req.query.subject || req.params.id;
+    const patientId = normalizePatientId(
+      req.query.patient || req.query.subject || req.params.id
+    );
     if (!patientId) {
       // If no patient param, this might not be a patient-specific query - continue
       return next();
     }
 
     // Get requestor info from JWT (should be in req.user or req.userId)
-    const requestorId = req.user?._id || req.userId;
-    const requestorRole = req.user?.role || req.userRole;
+    const requestorId = req.user?._id || req.user?.id || req.userId;
+    const requestorRoles = getNormalizedRoles(req.user, req.userRole);
+    const patientIdsFromAuth = getPatientIdsFromAuthContext(req);
+    const patientIdsFromTokenClaims = getPatientIdsFromTokenClaims(req);
+    const resourceType = req.params.resourceType || extractResourceTypeFromPath(req.path);
+
+    if (patientIdsFromAuth.has(patientId)) {
+      req.consentCheckPassed = true;
+      return next();
+    }
+
+    if (
+      patientIdsFromTokenClaims.has(patientId) &&
+      hasReadScopeForResource(req.auth?.scopes, resourceType)
+    ) {
+      req.consentCheckPassed = true;
+      return next();
+    }
 
     // Rule 1: If requestor is the patient, always allow
-    if (requestorId.toString() === patientId.toString()) {
+    if (requestorId && requestorId.toString() === patientId.toString()) {
       req.consentCheckPassed = true;
       return next();
     }
 
     // Rule 2: If requestor is admin or hospital_admin, always allow
-    if (["admin", "hospital_admin"].includes(requestorRole)) {
+    if (requestorRoles.some((role) => ["admin", "hospital_admin"].includes(role))) {
       req.consentCheckPassed = true;
       return next();
     }
 
     // Rule 3: If requestor is a doctor/practitioner, check consent
-    if (["doctor", "hospital"].includes(requestorRole)) {
-      // Determine the resource type being accessed
-      const resourceType = req.params.resourceType || extractResourceTypeFromPath(req.path);
-
+    if (requestorRoles.some((role) => ["doctor", "hospital", "practitioner"].includes(role))) {
       // Query for active consent from patient to this doctor covering this resource
       const consent = await Consent.findOne({
         patient_ref: patientId,

@@ -212,6 +212,56 @@ const apiClient = axios.create({
   }
 });
 
+const decodeJwtPayload = (token) => {
+  if (!token || typeof token !== 'string') return null;
+
+  try {
+    const payloadSegment = token.split('.')[1];
+    if (!payloadSegment) return null;
+
+    const base64 = payloadSegment.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((char) => `%${`00${char.charCodeAt(0).toString(16)}`.slice(-2)}`)
+        .join('')
+    );
+
+    return JSON.parse(json);
+  } catch (error) {
+    return null;
+  }
+};
+
+const getValidFhirToken = () => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('Authentication token not found. Please log in again.');
+  }
+
+  const payload = decodeJwtPayload(token);
+  if (payload?.exp && Date.now() >= payload.exp * 1000) {
+    throw new Error('Your session has expired. Please log in again.');
+  }
+
+  return token;
+};
+
+const buildFhirPermissionError = (error, fallbackMessage) => {
+  const operationOutcome = error.response?.data;
+  const outcomeErrors = extractOperationOutcomeErrors(operationOutcome);
+  const isForbidden = error.response?.status === 403;
+  const message =
+    outcomeErrors[0] ||
+    (isForbidden ? fallbackMessage : error.message || fallbackMessage);
+
+  const enhancedError = new Error(message);
+  enhancedError.response = error.response;
+  enhancedError.operationOutcome = operationOutcome;
+  enhancedError.originalError = error;
+  return enhancedError;
+};
+
 // Add token to requests
 fhirClient.interceptors.request.use(
   (config) => {
@@ -304,15 +354,27 @@ export const getPatientEverything = async (patientId) => {
  */
 export const getConditions = async (patientId, params = {}) => {
   try {
+    const token = getValidFhirToken();
     let url = `/Condition?patient=${patientId}`;
     if (params.appointmentId) {
       url += `&appointmentId=${params.appointmentId}`;
     }
-    const response = await fhirClient.get(url);
+    const response = await fhirClient.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data;
   } catch (error) {
-    console.error('Error fetching conditions:', error);
-    throw error;
+    const enhancedError = buildFhirPermissionError(
+      error,
+      "You don't have permission to view these conditions."
+    );
+    console.error('Error fetching conditions:', {
+      status: error.response?.status,
+      message: enhancedError.message,
+    });
+    throw enhancedError;
   }
 };
 
@@ -993,6 +1055,7 @@ export const uploadDocument = async (formData) => {
  */
 export const getDocuments = async (patientId, params = {}) => {
   try {
+    const token = getValidFhirToken();
     let url = `/DocumentReference?patient=${patientId}`;
     if (params.type) {
       url += `&type=${params.type}`;
@@ -1000,11 +1063,22 @@ export const getDocuments = async (patientId, params = {}) => {
     if (params.date) {
       url += `&date=${params.date}`;
     }
-    const response = await fhirClient.get(url);
+    const response = await fhirClient.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return response.data;
   } catch (error) {
-    console.error('Error fetching documents:', error);
-    throw error;
+    const enhancedError = buildFhirPermissionError(
+      error,
+      "You don't have permission to view these documents."
+    );
+    console.error('Error fetching documents:', {
+      status: error.response?.status,
+      message: enhancedError.message,
+    });
+    throw enhancedError;
   }
 };
 

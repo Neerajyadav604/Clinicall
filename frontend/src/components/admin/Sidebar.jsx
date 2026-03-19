@@ -56,31 +56,32 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       {/* Sidebar */}
       <aside
         className={`${
-          isOpen ? "w-64" : "w-20"
-        } bg-gradient-to-b from-blue-900 to-blue-800 text-white transition-all duration-300 ease-in-out overflow-y-auto`}
+          isOpen ? "w-60 sm:w-64" : "w-16 sm:w-20"
+        } bg-gradient-to-b from-blue-900 to-blue-800 text-white transition-all duration-300 ease-in-out overflow-y-auto hidden sm:flex flex-col`}
       >
         {/* Logo */}
-        <div className="h-20 flex items-center justify-center border-b border-blue-700">
-          <div className="text-2xl font-bold">
-            {isOpen ? "ClinicAll Admin" : "CA"}
+        <div className="h-16 sm:h-20 flex items-center justify-center border-b border-blue-700 flex-shrink-0">
+          <div className="text-lg sm:text-2xl font-bold text-center px-2">
+            {isOpen ? "ClinicAll Admin" : <span title="ClinicAll Admin">CA</span>}
           </div>
         </div>
 
         {/* Menu Items */}
-        <nav className="mt-8 px-4 space-y-2">
+        <nav className="mt-6 sm:mt-8 px-2 sm:px-4 space-y-1 sm:space-y-2 flex-1 overflow-y-auto">
           {menuItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
+              title={!isOpen ? item.name : undefined}
               className={({ isActive }) =>
-                `flex items-center gap-4 px-4 py-3 rounded-lg transition-all duration-200 ${
+                `flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-2 sm:py-3 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-blue-900 min-h-[44px] sm:min-h-auto ${
                   isActive
                     ? "bg-blue-600 text-white shadow-lg"
                     : "text-blue-100 hover:bg-blue-700"
                 }`
               }
             >
-              <span className="flex-shrink-0">{item.icon}</span>
+              <span className="flex-shrink-0" aria-hidden="true">{item.icon}</span>
               {isOpen && <span className="font-medium">{item.name}</span>}
             </NavLink>
           ))}

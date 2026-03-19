@@ -320,7 +320,13 @@ const ConsentManager = ({ patientId }) => {
   };
 
   return (
-    <div className="rounded-[20px] border border-[var(--line)] bg-[var(--surface)] p-6 shadow-[0_16px_34px_-26px_rgba(2,6,23,0.45)]">
+    <div 
+      className="rounded-[20px] border bg-white p-6 shadow-[0_16px_34px_-26px_rgba(2,6,23,0.45)]"
+      style={{
+        borderColor: "#d9e2ec",
+        backgroundColor: "#ffffff"
+      }}
+    >
       <h3 className="text-lg font-semibold text-slate-900 mb-4">Privacy & Consent</h3>
 
       {/* Tabs */}

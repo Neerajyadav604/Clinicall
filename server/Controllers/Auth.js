@@ -25,12 +25,11 @@ exports.signup = async (req, res) => {
       });
     }
 
-    // ✅ SECURITY: Validate password strength (minimum 8 chars, mixed character types)
-    const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordStrengthRegex.test(password)) {
+    // ✅ Basic password validation
+    if (!password || password.trim().length < 4) {
       return res.status(400).json({
         success: false,
-        message: "Password must be at least 8 characters long and contain uppercase, lowercase, numbers, and special characters (@$!%*?&)"
+        message: "Password must be at least 4 characters long"
       });
     }
 

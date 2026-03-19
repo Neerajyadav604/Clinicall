@@ -50,12 +50,20 @@ import LabResultsViewer from "../components/clinical/LabResultsViewer";
 import ConsentManager from "../components/consent/ConsentManager";
 import AccessLogViewer from "../components/consent/AccessLogViewer";
 import DocumentVault from "../components/clinical/DocumentVault";
+// AI Components
+import AISummaryPanel from "../components/ai/AISummaryPanel";
 
 const SectionShell = ({ title, subtitle, children }) => (
-  <section className="rounded-[20px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_16px_34px_-26px_rgba(2,6,23,0.45)] md:p-6">
-    <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-    {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
-    <div className="mt-5">{children}</div>
+  <section 
+    className="rounded-[20px] border bg-white p-4 sm:p-5 md:p-6 shadow-[0_16px_34px_-26px_rgba(2,6,23,0.45)]"
+    style={{
+      borderColor: "#d9e2ec",
+      backgroundColor: "#ffffff"
+    }}
+  >
+    <h2 className="text-base sm:text-lg font-semibold text-slate-900">{title}</h2>
+    {subtitle ? <p className="mt-1 text-xs sm:text-sm text-slate-500">{subtitle}</p> : null}
+    <div className="mt-4 sm:mt-5">{children}</div>
   </section>
 );
 
@@ -64,20 +72,21 @@ const HIPAABanner = ({ onDismiss }) => {
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mb-6 p-4 rounded-lg border border-blue-200 bg-blue-50 flex items-start gap-3"
+      className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg border border-blue-200 bg-blue-50 flex items-start gap-2 sm:gap-3"
     >
       <Shield className="w-5 h-5 flex-shrink-0 text-blue-700 mt-0.5" />
-      <div className="flex-1">
-        <p className="text-sm font-semibold text-blue-900">HIPAA Compliance Notice</p>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs sm:text-sm font-semibold text-blue-900">HIPAA Compliance Notice</p>
         <p className="text-xs text-blue-800 mt-1">
           Your medical records are protected under HIPAA. All access is logged and monitored. Review your&nbsp;
-          <button className="underline font-medium hover:text-blue-700">access log</button>
+          <button className="underline font-medium hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">access log</button>
           &nbsp;anytime.
         </p>
       </div>
       <button
         onClick={onDismiss}
-        className="flex-shrink-0 text-blue-600 hover:text-blue-700"
+        className="flex-shrink-0 text-blue-600 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-0.5"
+        aria-label="Dismiss HIPAA banner"
       >
         <X className="w-4 h-4" />
       </button>
@@ -152,6 +161,7 @@ const MedicalRecords = () => {
   const [paidAppointmentIds, setPaidAppointmentIds] = useState([]);
   const [hasAnyPaidConsultation, setHasAnyPaidConsultation] = useState(false);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("clinical");
 
   useEffect(() => {
     if (token) {
@@ -521,7 +531,7 @@ const MedicalRecords = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[var(--page)]">
+    <div className="min-h-screen flex flex-col md:flex-row" style={{ backgroundColor: "#f3f7fb" }}>
       {/* ── Sidebar ── */}
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen}>
         <SidebarBody className="justify-between gap-10 h-full min-h-screen">
@@ -562,11 +572,9 @@ const MedicalRecords = () => {
       {/* ── Main Content ── */}
       <div className="flex-1 overflow-y-auto">
         <div
-          className="bg-[var(--page)] px-4 py-8 md:px-8"
+          className="px-4 py-8 md:px-8"
           style={{
-            "--page": "#f3f7fb",
-            "--surface": "#ffffff",
-            "--line": "#d9e2ec",
+            backgroundColor: "#f3f7fb",
           }}
         >
           <div className="mx-auto max-w-4xl space-y-6">
@@ -596,6 +604,30 @@ const MedicalRecords = () => {
 
             {/* Main Content */}
             <main className="space-y-6">
+              {/* Tab Navigation */}
+              <div className="flex gap-2 bg-white rounded-lg shadow-sm border border-gray-100 p-1">
+                <button
+                  onClick={() => setActiveTab("clinical")}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === "clinical"
+                      ? "bg-blue-600 text-white"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  📋 Clinical Records
+                </button>
+                <button
+                  onClick={() => setActiveTab("ai-summary")}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === "ai-summary"
+                      ? "bg-blue-600 text-white"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  🤖 AI Summary
+                </button>
+              </div>
+
               {/* HIPAA Compliance Banner */}
               {showHIPAABanner && (
                 <HIPAABanner onDismiss={() => setShowHIPAABanner(false)} />
@@ -622,68 +654,80 @@ const MedicalRecords = () => {
                 </motion.div>
               )}
 
-              {/*  Clinical Timeline */}
-              <SectionShell title="Clinical Timeline" subtitle="All your medical events in chronological order">
-                <MedicalTimeline
-                  conditions={conditions}
-                  observations={observations}
-                  procedures={procedures}
-                  immunizations={immunizations}
-                  loading={consultationLoading}
-                />
-              </SectionShell>
+              {/* Clinical Records Tab */}
+              {activeTab === "clinical" && (
+                <>
+                  {/*  Clinical Timeline */}
+                  <SectionShell title="Clinical Timeline" subtitle="All your medical events in chronological order">
+                    <MedicalTimeline
+                      conditions={conditions}
+                      observations={observations}
+                      procedures={procedures}
+                      immunizations={immunizations}
+                      loading={consultationLoading}
+                    />
+                  </SectionShell>
 
-              {/* Vital Signs Chart */}
-              <SectionShell title="Vital Signs Trend" subtitle="Your vital signs over time">
-                <VitalSignsChart
-                  observations={observations}
-                  loading={consultationLoading}
-                />
-              </SectionShell>
+                  {/* Vital Signs Chart */}
+                  <SectionShell title="Vital Signs Trend" subtitle="Your vital signs over time">
+                    <VitalSignsChart
+                      observations={observations}
+                      loading={consultationLoading}
+                    />
+                  </SectionShell>
 
-              {/* Medications */}
-              <SectionShell title="Current Medications" subtitle="Your active and past prescriptions">
-                <MedicationList
-                  medications={medications}
-                  loading={consultationLoading}
-                />
-              </SectionShell>
+                  {/* Medications */}
+                  <SectionShell title="Current Medications" subtitle="Your active and past prescriptions">
+                    <MedicationList
+                      medications={medications}
+                      loading={consultationLoading}
+                    />
+                  </SectionShell>
 
-              {/* Lab Results / Diagnostic Reports */}
-              <SectionShell title="Lab Results & Reports" subtitle="Your diagnostic reports and test results">
-                <LabResultsViewer
-                  reports={diagnosticReports}
-                  loading={consultationLoading}
-                />
-              </SectionShell>
+                  {/* Lab Results / Diagnostic Reports */}
+                  <SectionShell title="Lab Results & Reports" subtitle="Your diagnostic reports and test results">
+                    <LabResultsViewer
+                      reports={diagnosticReports}
+                      loading={consultationLoading}
+                    />
+                  </SectionShell>
 
-              {/* My Documents */}
-              <SectionShell title="My Documents">
-                <DocumentVault patientId={user?._id} isDoctor={false} />
-              </SectionShell>
+                  {/* My Documents */}
+                  <SectionShell title="My Documents">
+                    <DocumentVault patientId={user?._id} isDoctor={false} />
+                  </SectionShell>
 
-              {/* Privacy & Consent */}
-              <SectionShell title="Privacy & Consent">
-                <ConsentManager patientId={user?._id} />
-              </SectionShell>
+                  {/* Privacy & Consent */}
+                  <SectionShell title="Privacy & Consent">
+                    <ConsentManager patientId={user?._id} />
+                  </SectionShell>
 
-              {/* Access Log */}
-              <SectionShell title="Access Log">
-                <AccessLogViewer patientId={user?._id} />
-              </SectionShell>
+                  {/* Access Log */}
+                  <SectionShell title="Access Log">
+                    <AccessLogViewer patientId={user?._id} />
+                  </SectionShell>
 
-              {/* Security Information */}
-              <SectionShell title="Security & Privacy">
-                <div className="space-y-3 text-sm text-slate-600">
-                  <p>Your medical records are securely encrypted according to HIPAA standards.</p>
-                  <p>
-                    All access to your records is logged and monitored for security. You have the right to access, update, and control your medical records.
-                  </p>
-                  <p>
-                    For more information about your privacy rights, please contact support.
-                  </p>
+                  {/* Security Information */}
+                  <SectionShell title="Security & Privacy">
+                    <div className="space-y-3 text-sm text-slate-600">
+                      <p>Your medical records are securely encrypted according to HIPAA standards.</p>
+                      <p>
+                        All access to your records is logged and monitored for security. You have the right to access, update, and control your medical records.
+                      </p>
+                      <p>
+                        For more information about your privacy rights, please contact support.
+                      </p>
+                    </div>
+                  </SectionShell>
+                </>
+              )}
+
+              {/* AI Summary Tab */}
+              {activeTab === "ai-summary" && (
+                <div className="mt-6">
+                  <AISummaryPanel />
                 </div>
-              </SectionShell>
+              )}
             </main>
           </div>
         </div>

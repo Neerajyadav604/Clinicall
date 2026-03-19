@@ -44,7 +44,13 @@ const buildDefaultValues = (user) => {
 };
 
 const SectionCard = ({ title, subtitle, children }) => (
-  <section className="rounded-[20px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_14px_30px_-24px_rgba(2,6,23,0.4)] md:p-6">
+  <section 
+    className="rounded-[20px] border bg-white p-5 shadow-[0_14px_30px_-24px_rgba(2,6,23,0.4)] md:p-6"
+    style={{
+      borderColor: "#d9e2ec",
+      backgroundColor: "#ffffff"
+    }}
+  >
     <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
     {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
     <div className="mt-5">{children}</div>
@@ -62,11 +68,11 @@ const TextInput = ({ register, name, rules, error, ...props }) => (
     <input
       {...register(name, rules)}
       {...props}
-      className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20 ${
+      className={`w-full rounded-xl border bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-800 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20 min-h-[44px] ${
         error ? "border-rose-400" : "border-slate-200"
       } ${props.className || ""}`}
     />
-    {error ? <p className="mt-1 text-xs text-rose-500">{error.message}</p> : null}
+    {error ? <p className="mt-1.5 text-xs text-rose-500 font-medium">{error.message}</p> : null}
   </>
 );
 
@@ -75,11 +81,11 @@ const TextArea = ({ register, name, rules, error, ...props }) => (
     <textarea
       {...register(name, rules)}
       {...props}
-      className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20 ${
+      className={`w-full rounded-xl border bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-800 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20 min-h-[100px] ${
         error ? "border-rose-400" : "border-slate-200"
       } ${props.className || ""}`}
     />
-    {error ? <p className="mt-1 text-xs text-rose-500">{error.message}</p> : null}
+    {error ? <p className="mt-1.5 text-xs text-rose-500 font-medium">{error.message}</p> : null}
   </>
 );
 
@@ -87,13 +93,13 @@ const SelectInput = ({ register, name, rules, error, children }) => (
   <>
     <select
       {...register(name, rules)}
-      className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20 ${
+      className={`w-full rounded-xl border bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm text-slate-800 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20 min-h-[44px] ${
         error ? "border-rose-400" : "border-slate-200"
       }`}
     >
       {children}
     </select>
-    {error ? <p className="mt-1 text-xs text-rose-500">{error.message}</p> : null}
+    {error ? <p className="mt-1.5 text-xs text-rose-500 font-medium">{error.message}</p> : null}
   </>
 );
 
@@ -161,8 +167,9 @@ const EditProfile = () => {
 
   return (
     <div
-      className="min-h-screen bg-[var(--page)] px-4 py-8 md:px-8"
+      className="min-h-screen px-4 py-6 sm:py-8 md:px-8"
       style={{
+        backgroundColor: "#f3f7fb",
         "--page": "#f3f7fb",
         "--surface": "#ffffff",
         "--line": "#d9e2ec",
@@ -208,7 +215,7 @@ const EditProfile = () => {
               {submitError}
             </div>
           ) : null}
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <button
               type="button"
               onClick={() => navigate(-1)}

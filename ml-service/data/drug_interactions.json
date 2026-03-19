@@ -1,0 +1,510 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-03-19",
+  "total_interactions": 60,
+  "severity_counts": {
+    "CRITICAL": 5,
+    "HIGH": 20,
+    "MODERATE": 20,
+    "LOW": 15
+  },
+  "interactions": [
+    {
+      "drug1": "Fluoxetine",
+      "drug2": "Phenelzine",
+      "severity": "CRITICAL",
+      "effect": "Serotonin syndrome — potentially fatal. Agitation, hyperthermia, muscle rigidity, seizures, coma, and death. Can occur within 24 hours of combination.",
+      "recommendation": "NEVER combine. Discontinue SSRI at least 14 days before starting MAOI. Discontinue MAOI at least 2 weeks before starting SSRI (5 weeks for fluoxetine due to long half-life).",
+      "mechanism": "Pharmacodynamic — additive serotonergic effect"
+    },
+    {
+      "drug1": "Warfarin",
+      "drug2": "Metronidazole",
+      "severity": "CRITICAL",
+      "effect": "Severe potentiation of anticoagulation. Life-threatening bleeding and hemorrhage risk. Warfarin levels can double.",
+      "recommendation": "Avoid combination. If essential, reduce warfarin dose by 25-50%, monitor INR daily, monitor for signs of bleeding.",
+      "mechanism": "Pharmacokinetic — CYP2C9 inhibition"
+    },
+    {
+      "drug1": "Lithium",
+      "drug2": "Ibuprofen",
+      "severity": "CRITICAL",
+      "effect": "NSAIDs reduce renal lithium clearance causing lithium toxicity. Tremors, confusion, seizures, cardiac arrhythmias, renal failure, coma, death.",
+      "recommendation": "Avoid NSAID use in lithium patients. If essential use lowest dose for shortest duration, monitor serum lithium levels every 3-5 days.",
+      "mechanism": "Pharmacokinetic — reduced renal elimination"
+    },
+    {
+      "drug1": "Digoxin",
+      "drug2": "Amiodarone",
+      "severity": "CRITICAL",
+      "effect": "Amiodarone increases digoxin plasma levels 70% causing digoxin toxicity. Nausea, vomiting, arrhythmias, cardiac arrest, potentially fatal.",
+      "recommendation": "Reduce digoxin dose by 50% when starting amiodarone. Monitor digoxin and potassium levels weekly. Obtain baseline and follow-up ECG.",
+      "mechanism": "Pharmacokinetic — P-glycoprotein and CYP3A4 inhibition"
+    },
+    {
+      "drug1": "Tramadol",
+      "drug2": "Phenelzine",
+      "severity": "CRITICAL",
+      "effect": "Severe serotonin syndrome and seizures. Can be fatal within hours. Risk of respiratory depression and hyperthermia.",
+      "recommendation": "NEVER combine. 14-day washout period required. Absolute contraindication.",
+      "mechanism": "Pharmacodynamic — serotonergic effect and opioid receptor interaction"
+    },
+    {
+      "drug1": "Warfarin",
+      "drug2": "Aspirin",
+      "severity": "HIGH",
+      "effect": "Increased risk of serious bleeding and hemorrhage. Both drugs inhibit clotting through different mechanisms, causing additive anticoagulation.",
+      "recommendation": "Avoid combination unless benefit outweighs risk. Monitor INR closely. Use lowest effective aspirin dose if essential. Monitor for bleeding signs.",
+      "mechanism": "Pharmacodynamic — additive anticoagulant effect"
+    },
+    {
+      "drug1": "Warfarin",
+      "drug2": "Ibuprofen",
+      "severity": "HIGH",
+      "effect": "Increased bleeding risk. Ibuprofen inhibits platelet function and increases INR effect of warfarin.",
+      "recommendation": "Avoid combination. If NSAID essential use acetaminophen instead. Monitor INR if used together.",
+      "mechanism": "Pharmacodynamic — additive antiplatelet and anticoagulant effect"
+    },
+    {
+      "drug1": "Warfarin",
+      "drug2": "Naproxen",
+      "severity": "HIGH",
+      "effect": "Increased bleeding risk and GI hemorrhage. Naproxen reduces platelet aggregation and increases warfarin effect.",
+      "recommendation": "Avoid NSAID use with warfarin. Use acetaminophen for pain. If essential monitor INR closely.",
+      "mechanism": "Pharmacodynamic — additive effect on bleeding"
+    },
+    {
+      "drug1": "Warfarin",
+      "drug2": "Diclofenac",
+      "severity": "HIGH",
+      "effect": "Increased bleeding risk and potential for serious GI hemorrhage. Diclofenac potentiates warfarin effect.",
+      "recommendation": "Contraindicated. Use alternative pain management. Monitor for signs of bleeding.",
+      "mechanism": "Pharmacodynamic — additive anticoagulant and antiplatelet effect"
+    },
+    {
+      "drug1": "Warfarin",
+      "drug2": "Fluconazole",
+      "severity": "HIGH",
+      "effect": "Fluconazole inhibits warfarin metabolism (CYP2C9) causing increased INR and bleeding risk.",
+      "recommendation": "Monitor INR every 2-3 days. Reduce warfarin dose. Continue monitoring for 2 weeks after stopping fluconazole.",
+      "mechanism": "Pharmacokinetic — CYP2C9 inhibition"
+    },
+    {
+      "drug1": "Warfarin",
+      "drug2": "Ciprofloxacin",
+      "severity": "HIGH",
+      "effect": "Ciprofloxacin increases warfarin effect by inhibiting CYP2C9, increasing bleeding risk.",
+      "recommendation": "Monitor INR closely during and after ciprofloxacin use. May need warfarin dose reduction.",
+      "mechanism": "Pharmacokinetic — CYP2C9 inhibition"
+    },
+    {
+      "drug1": "Warfarin",
+      "drug2": "Clarithromycin",
+      "severity": "HIGH",
+      "effect": "Clarithromycin inhibits CYP3A4 and CYP2C9, increasing warfarin levels and bleeding risk.",
+      "recommendation": "Monitor INR closely. Reduce warfarin dose if necessary. Continue monitoring 1 week after discontinuation.",
+      "mechanism": "Pharmacokinetic — CYP2C9 and CYP3A4 inhibition"
+    },
+    {
+      "drug1": "Methotrexate",
+      "drug2": "Ibuprofen",
+      "severity": "HIGH",
+      "effect": "NSAIDs reduce renal methotrexate clearance causing accumulation and toxicity. Nephrotoxicity, bone marrow suppression, liver damage.",
+      "recommendation": "Avoid NSAID use in methotrexate patients. Use acetaminophen or avoid analgesics. Monitor renal function and CBC.",
+      "mechanism": "Pharmacokinetic — reduced renal elimination"
+    },
+    {
+      "drug1": "Methotrexate",
+      "drug2": "Naproxen",
+      "severity": "HIGH",
+      "effect": "NSAIDs inhibit renal methotrexate excretion causing toxicity and methotrexate accumulation.",
+      "recommendation": "Avoid combination. Monitor methotrexate levels and renal function if unavoidable.",
+      "mechanism": "Pharmacokinetic — reduced renal clearance"
+    },
+    {
+      "drug1": "Methotrexate",
+      "drug2": "Aspirin",
+      "severity": "HIGH",
+      "effect": "Aspirin reduces methotrexate renal clearance causing toxicity and bone marrow suppression.",
+      "recommendation": "Avoid aspirin in methotrexate-treated patients. Use alternative analgesic.",
+      "mechanism": "Pharmacokinetic — reduced renal elimination"
+    },
+    {
+      "drug1": "Lisinopril",
+      "drug2": "Potassium",
+      "severity": "HIGH",
+      "effect": "ACE inhibitors reduce aldosterone production allowing potassium retention. Risk of severe hyperkalemia (high potassium levels) causing cardiac arrhythmias.",
+      "recommendation": "Monitor serum potassium levels monthly initially. Avoid potassium supplements unless specifically ordered. Dietary potassium restriction advised.",
+      "mechanism": "Pharmacodynamic — additive potassium-sparing effect"
+    },
+    {
+      "drug1": "Lisinopril",
+      "drug2": "Spironolactone",
+      "severity": "HIGH",
+      "effect": "Both drugs retain potassium. Combined use significantly increases hyperkalemia risk. Cardiac dysrhythmias, muscle weakness, cardiac arrest possible.",
+      "recommendation": "Use together only if clearly beneficial. Monitor serum potassium and creatinine every 1-2 weeks initially.",
+      "mechanism": "Pharmacodynamic — additive potassium retention"
+    },
+    {
+      "drug1": "Heparin",
+      "drug2": "Aspirin",
+      "severity": "HIGH",
+      "effect": "Additive bleeding risk. Both inhibit platelet function and anticoagulation, increasing serious bleeding risk.",
+      "recommendation": "Monitor closely for bleeding. Use lowest effective doses. May be used together under close medical supervision.",
+      "mechanism": "Pharmacodynamic — additive antiplatelet and anticoagulant effect"
+    },
+    {
+      "drug1": "Clopidogrel",
+      "drug2": "Omeprazole",
+      "severity": "HIGH",
+      "effect": "Omeprazole (CYP2C19 inhibitor) reduces clopidogrel activation (prodrug). Reduced antiplatelet effect increasing thrombotic events.",
+      "recommendation": "Avoid omeprazole if possible. Use H2 antagonist or different PPI (pantoprazole preferred). Monitor for stent thrombosis.",
+      "mechanism": "Pharmacokinetic — CYP2C19 inhibition"
+    },
+    {
+      "drug1": "Simvastatin",
+      "drug2": "Clarithromycin",
+      "severity": "HIGH",
+      "effect": "Clarithromycin inhibits CYP3A4 increasing simvastatin levels 10-fold, causing severe myopathy and rhabdomyolysis risk.",
+      "recommendation": "Avoid combination. Use alternative antibiotic (azithromycin) or alternative statin. Monitor CK if unavoidable.",
+      "mechanism": "Pharmacokinetic — CYP3A4 inhibition"
+    },
+    {
+      "drug1": "Simvastatin",
+      "drug2": "Erythromycin",
+      "severity": "HIGH",
+      "effect": "Erythromycin inhibits CYP3A4 increasing simvastatin levels 5-fold, causing myopathy risk.",
+      "recommendation": "Use alternative antibiotic or alternative statin. Monitor for muscle pain.",
+      "mechanism": "Pharmacokinetic — CYP3A4 inhibition"
+    },
+    {
+      "drug1": "Atorvastatin",
+      "drug2": "Clarithromycin",
+      "severity": "HIGH",
+      "effect": "Clarithromycin inhibits CYP3A4 increasing atorvastatin levels, increasing myopathy risk.",
+      "recommendation": "Monitor for muscle symptoms. May need atorvastatin dose reduction. Use alternative antibiotic if possible.",
+      "mechanism": "Pharmacokinetic — CYP3A4 inhibition"
+    },
+    {
+      "drug1": "Carbamazepine",
+      "drug2": "Ethinylestradiol",
+      "severity": "HIGH",
+      "effect": "Carbamazepine induces CYP3A4 reducing oral contraceptive metabolism and efficacy, increasing pregnancy risk.",
+      "recommendation": "Use alternative contraception method or increase OCP dose. Notify patients of reduced efficacy.",
+      "mechanism": "Pharmacokinetic — CYP3A4 enzyme induction"
+    },
+    {
+      "drug1": "Rifampicin",
+      "drug2": "Ethinylestradiol",
+      "severity": "HIGH",
+      "effect": "Rifampicin strongly induces CYP3A4 reducing OCP metabolism and contraceptive efficacy. Unintended pregnancy risk.",
+      "recommendation": "Alternative contraception advised. If OCP used, increase dose. Continue contraception 7 days after rifampicin stopped.",
+      "mechanism": "Pharmacokinetic — CYP3A4 enzyme induction"
+    },
+    {
+      "drug1": "Phenytoin",
+      "drug2": "Warfarin",
+      "severity": "HIGH",
+      "effect": "Phenytoin initially increases warfarin effect (inhibits metabolism) then decreases it (induces metabolism). Unpredictable INR.",
+      "recommendation": "Monitor INR closely, especially when starting/stopping phenytoin. Warfarin dosing adjustment required.",
+      "mechanism": "Pharmacokinetic — biphasic CYP2C9 effect"
+    },
+    {
+      "drug1": "Metformin",
+      "drug2": "Alcohol",
+      "severity": "MODERATE",
+      "effect": "Alcohol increases metformin levels and lactate levels. Risk of lactic acidosis especially with renal impairment.",
+      "recommendation": "Limit alcohol consumption. Avoid binge drinking. Monitor for fatigue, muscle pain, difficulty breathing.",
+      "mechanism": "Pharmacokinetic — reduced hepatic metabolism"
+    },
+    {
+      "drug1": "Atorvastatin",
+      "drug2": "Fibrate",
+      "severity": "MODERATE",
+      "effect": "Combined statin-fibrate therapy increases myopathy and rhabdomyolysis risk significantly.",
+      "recommendation": "Use lowest statin dose. Monitor CK and muscle symptoms. Consider alternative therapy.",
+      "mechanism": "Pharmacodynamic — additive myotoxic effect"
+    },
+    {
+      "drug1": "Lisinopril",
+      "drug2": "Ibuprofen",
+      "severity": "MODERATE",
+      "effect": "NSAIDs reduce ACE inhibitor efficacy and increase renal dysfunction and hyperkalemia risk.",
+      "recommendation": "Use alternative pain reliever. Monitor blood pressure and renal function. Use lowest NSAID dose if necessary.",
+      "mechanism": "Pharmacodynamic — antagonistic blood pressure effect + pharmacokinetic renal effect"
+    },
+    {
+      "drug1": "Metoprolol",
+      "drug2": "Amlodipine",
+      "severity": "MODERATE",
+      "effect": "Combined use causes excessive bradycardia and hypotension. Risk of syncope, heart block, reduced cardiac output.",
+      "recommendation": "Monitor heart rate and blood pressure. May need dose adjustment. Monitor for dizziness.",
+      "mechanism": "Pharmacodynamic — additive negative inotropic and chronotropic effect"
+    },
+    {
+      "drug1": "Fluoxetine",
+      "drug2": "Tramadol",
+      "severity": "MODERATE",
+      "effect": "Risk of serotonin syndrome — agitation, confusion, rapid heart rate, high blood pressure, dilated pupils.",
+      "recommendation": "Use lower tramadol doses. Monitor for serotonin syndrome symptoms. Consider alternative pain medication.",
+      "mechanism": "Pharmacodynamic — additive serotonergic effect"
+    },
+    {
+      "drug1": "Sertraline",
+      "drug2": "Tramadol",
+      "severity": "MODERATE",
+      "effect": "Serotonin syndrome risk with combined serotoninergic effects of SSRI and opioid properties of tramadol.",
+      "recommendation": "Avoid if possible. If necessary monitor closely for serotonin syndrome (agitation, fever, muscle rigidity).",
+      "mechanism": "Pharmacodynamic — additive serotonergic effect"
+    },
+    {
+      "drug1": "Ciprofloxacin",
+      "drug2": "Aluminum",
+      "severity": "MODERATE",
+      "effect": "Aluminum antacids reduce ciprofloxacin absorption by 50-75%, reducing antibiotic efficacy.",
+      "recommendation": "Separate administration by 2-4 hours. Take ciprofloxacin first, then antacid at least 2 hours later.",
+      "mechanism": "Pharmacokinetic — reduced absorption"
+    },
+    {
+      "drug1": "Doxycycline",
+      "drug2": "Calcium",
+      "severity": "MODERATE",
+      "effect": "Divalent cations (calcium, magnesium) form insoluble complexes with doxycycline reducing absorption.",
+      "recommendation": "Separate by 2 hours. Take doxycycline on empty stomach before antacids/dairy.",
+      "mechanism": "Pharmacokinetic — reduced absorption"
+    },
+    {
+      "drug1": "Tetracycline",
+      "drug2": "Dairy",
+      "severity": "MODERATE",
+      "effect": "Milk and dairy products contain calcium forming complexes with tetracycline, reducing absorption by 50-80%.",
+      "recommendation": "Avoid dairy 2 hours before and 6 hours after tetracycline. Take on empty stomach.",
+      "mechanism": "Pharmacokinetic — formation of insoluble complex"
+    },
+    {
+      "drug1": "Amlodipine",
+      "drug2": "Simvastatin",
+      "severity": "MODERATE",
+      "effect": "Amlodipine inhibits CYP3A4 increasing simvastatin levels and myopathy risk.",
+      "recommendation": "Use simvastatin lowest dose. Monitor for muscle pain. Consider alternative statin.",
+      "mechanism": "Pharmacokinetic — CYP3A4 inhibition"
+    },
+    {
+      "drug1": "Atorvastatin",
+      "drug2": "Amlodipine",
+      "severity": "MODERATE",
+      "effect": "Slight increase in atorvastatin levels. Increased myopathy risk with high doses.",
+      "recommendation": "Monitor for muscle symptoms. Usually safe together but watch for side effects.",
+      "mechanism": "Pharmacokinetic — CYP3A4 inhibition"
+    },
+    {
+      "drug1": "Metformin",
+      "drug2": "Iodinated Contrast",
+      "severity": "MODERATE",
+      "effect": "Contrast dye may impair renal function causing lactic acidosis risk in metformin patients.",
+      "recommendation": "Hold metformin 48 hours before and after contrast procedures. Verify renal function recovery first.",
+      "mechanism": "Pharmacodynamic — additive nephrotoxic effect"
+    },
+    {
+      "drug1": "Spironolactone",
+      "drug2": "Ibuprofen",
+      "severity": "MODERATE",
+      "effect": "NSAIDs impair renal function increasing hyperkalemia risk. Both cause potassium retention.",
+      "recommendation": "Monitor serum potassium. Use alternative pain reliever. Monitor renal function.",
+      "mechanism": "Pharmacokinetic — reduced renal function + pharmacodynamic potassium effect"
+    },
+    {
+      "drug1": "Lithium",
+      "drug2": "Hydrochlorothiazide",
+      "severity": "MODERATE",
+      "effect": "Thiazide diuretics reduce lithium clearance causing lithium accumulation and toxicity risk.",
+      "recommendation": "Monitor serum lithium levels weekly initially. Reduce lithium dose. Monitor for tremor, confusion.",
+      "mechanism": "Pharmacokinetic — reduced renal elimination"
+    },
+    {
+      "drug1": "Phenytoin",
+      "drug2": "Folic Acid",
+      "severity": "MODERATE",
+      "effect": "Phenytoin impairs folic acid metabolism causing deficiency. B12 deficiency and anemia risk.",
+      "recommendation": "Supplement with folic acid 1 mg daily. Monitor CBC regularly.",
+      "mechanism": "Pharmacokinetic — reduced folate metabolism"
+    },
+    {
+      "drug1": "Isoniazid",
+      "drug2": "Alcohol",
+      "severity": "MODERATE",
+      "effect": "Both are hepatotoxic. Alcohol increases INH toxicity risk. Liver function impairment.",
+      "recommendation": "Avoid alcohol during TB treatment. Monitor LFTs monthly. Educate patient on alcohol effects.",
+      "mechanism": "Pharmacodynamic — additive hepatotoxic effect"
+    },
+    {
+      "drug1": "Fluconazole",
+      "drug2": "Simvastatin",
+      "severity": "MODERATE",
+      "effect": "Fluconazole inhibits CYP3A4 increasing simvastatin levels and myopathy risk.",
+      "recommendation": "Monitor for muscle pain. Consider pravastatin or rosuvastatin instead.",
+      "mechanism": "Pharmacokinetic — CYP3A4 inhibition"
+    },
+    {
+      "drug1": "Ketoconazole",
+      "drug2": "Simvastatin",
+      "severity": "MODERATE",
+      "effect": "Ketoconazole strongly inhibits CYP3A4 increasing simvastatin accumulation and myopathy risk.",
+      "recommendation": "Avoid combination if possible. Use alternative statin. If necessary monitor CK.",
+      "mechanism": "Pharmacokinetic — CYP3A4 inhibition"
+    },
+    {
+      "drug1": "Omeprazole",
+      "drug2": "Clopidogrel",
+      "severity": "MODERATE",
+      "effect": "Omeprazole reduces clopidogrel's antiplatelet effect increasing stent thrombosis risk.",
+      "recommendation": "Choose alternative PPI (pantoprazole preferred) or use H2 blocker instead.",
+      "mechanism": "Pharmacokinetic — CYP2C19 inhibition"
+    },
+    {
+      "drug1": "Erythromycin",
+      "drug2": "Atorvastatin",
+      "severity": "MODERATE",
+      "effect": "Erythromycin inhibits CYP3A4 increasing atorvastatin levels. Myopathy risk.",
+      "recommendation": "Use alternative antibiotic if possible. Monitor for muscle pain.",
+      "mechanism": "Pharmacokinetic — CYP3A4 inhibition"
+    },
+    {
+      "drug1": "Verapamil",
+      "drug2": "Metoprolol",
+      "severity": "MODERATE",
+      "effect": "Both slow AV conduction. Risk of severe bradycardia, heart block, hypotension, syncope.",
+      "recommendation": "Avoid combination. Monitor cardiac rate if used. May need ECG monitoring.",
+      "mechanism": "Pharmacodynamic — additive cardiac depressant effect"
+    },
+    {
+      "drug1": "Diltiazem",
+      "drug2": "Bisoprolol",
+      "severity": "MODERATE",
+      "effect": "Both cause bradycardia and reduce cardiac conduction. Risk of heart block.",
+      "recommendation": "Monitor heart rate and rhythm. May need dose adjustment.",
+      "mechanism": "Pharmacodynamic — additive negative chronotropic effect"
+    },
+    {
+      "drug1": "Moxifloxacin",
+      "drug2": "Prednisone",
+      "severity": "MODERATE",
+      "effect": "Corticosteroids increase fluoroquinolone-associated tendinopathy risk. Tendon rupture possible.",
+      "recommendation": "Use alternative antibiotic if possible. Monitor for tendon symptoms. Advise rest.",
+      "mechanism": "Pharmacodynamic — additive risk of tendon damage"
+    },
+    {
+      "drug1": "Ciprofloxacin",
+      "drug2": "Antacid",
+      "severity": "LOW",
+      "effect": "Antacids reduce ciprofloxacin absorption slightly, reducing antibiotic efficacy.",
+      "recommendation": "Separate administration by 2-4 hours. Take ciprofloxacin at least 2 hours before antacid.",
+      "mechanism": "Pharmacokinetic — reduced absorption"
+    },
+    {
+      "drug1": "Doxycycline",
+      "drug2": "Iron supplement",
+      "severity": "LOW",
+      "effect": "Iron reduces doxycycline absorption, reducing antibiotic efficacy.",
+      "recommendation": "Take doxycycline 2 hours before iron supplement. Separate by at least 2 hours.",
+      "mechanism": "Pharmacokinetic — reduced absorption"
+    },
+    {
+      "drug1": "Tetracycline",
+      "drug2": "Iron",
+      "severity": "LOW",
+      "effect": "Iron forms chelate complex with tetracycline reducing absorption by 50%.",
+      "recommendation": "Separate by 2-3 hours. Take tetracycline on empty stomach before iron.",
+      "mechanism": "Pharmacokinetic — formation of chelate complex"
+    },
+    {
+      "drug1": "Azithromycin",
+      "drug2": "Antacid",
+      "severity": "LOW",
+      "effect": "Aluminum-magnesium antacids reduce azithromycin absorption slightly.",
+      "recommendation": "Take azithromycin 1 hour before or 4 hours after antacids.",
+      "mechanism": "Pharmacokinetic — reduced absorption"
+    },
+    {
+      "drug1": "Atorvastatin",
+      "drug2": "Grapefruit juice",
+      "severity": "LOW",
+      "effect": "Grapefruit inhibits CYP3A4 increasing atorvastatin levels slightly. Usually minor effect.",
+      "recommendation": "Avoid excessive grapefruit juice. One glass occasionally is usually safe.",
+      "mechanism": "Pharmacokinetic — CYP3A4 inhibition"
+    },
+    {
+      "drug1": "Simvastatin",
+      "drug2": "Grapefruit juice",
+      "severity": "LOW",
+      "effect": "Grapefruit juice increases simvastatin levels 5-fold. Myopathy risk with high statin doses.",
+      "recommendation": "Avoid grapefruit juice while taking simvastatin. Choose alternative statin if patient drinks grapefruit juice.",
+      "mechanism": "Pharmacokinetic — CYP3A4 inhibition"
+    },
+    {
+      "drug1": "Warfarin",
+      "drug2": "Vitamin E",
+      "severity": "LOW",
+      "effect": "High dose vitamin E may potentiate warfarin's anticoagulant effect increasing bleeding risk.",
+      "recommendation": "Limit vitamin E to moderate doses (400 IU/day). Monitor INR. Normal dietary vitamin E is safe.",
+      "mechanism": "Pharmacodynamic — additive anticoagulant effect"
+    },
+    {
+      "drug1": "Warfarin",
+      "drug2": "Fish oil",
+      "severity": "LOW",
+      "effect": "Fish oil at high doses may increase warfarin anticoagulant effect. Minor bleeding risk.",
+      "recommendation": "Use fish oil supplements cautiously. Monitor INR. Standard dietary fish consumption is safe.",
+      "mechanism": "Pharmacodynamic — antiplatelet and anticoagulant effect combination"
+    },
+    {
+      "drug1": "Aspirin",
+      "drug2": "Ibuprofen",
+      "severity": "LOW",
+      "effect": "NSAIDs may reduce aspirin's cardioprotective effect and increase GI bleeding risk.",
+      "recommendation": "Avoid concurrent use regularly. If needed use ibuprofen long-acting doses. Take aspirin at least 30 min before NSAID.",
+      "mechanism": "Pharmacodynamic — reduced aspirin antiplatelet effect"
+    },
+    {
+      "drug1": "Levothyroxine",
+      "drug2": "Calcium supplement",
+      "severity": "LOW",
+      "effect": "Calcium reduces levothyroxine absorption by 30-40% reducing thyroid hormone levels.",
+      "recommendation": "Take levothyroxine 4 hours before calcium supplement. Separate administration completely.",
+      "mechanism": "Pharmacokinetic — reduced absorption"
+    },
+    {
+      "drug1": "Levothyroxine",
+      "drug2": "Iron supplement",
+      "severity": "LOW",
+      "effect": "Iron reduces levothyroxine absorption reducing thyroid hormone levels.",
+      "recommendation": "Separate by 4 hours. Take levothyroxine 4 hours before iron supplement.",
+      "mechanism": "Pharmacokinetic — reduced absorption"
+    },
+    {
+      "drug1": "Alendronate",
+      "drug2": "Calcium",
+      "severity": "LOW",
+      "effect": "Calcium reduces alendronate absorption reducing osteoporosis treatment efficacy.",
+      "recommendation": "Take alendronate at least 30 minutes before calcium supplement on empty stomach.",
+      "mechanism": "Pharmacokinetic — reduced absorption"
+    },
+    {
+      "drug1": "Fluoxetine",
+      "drug2": "Alcohol",
+      "severity": "LOW",
+      "effect": "Alcohol potentiates SSRI CNS depression causing sedation, impaired judgment, and reduced motor coordination.",
+      "recommendation": "Limit or avoid alcohol. Warn patient about driving impairment. Moderate consumption usually safe.",
+      "mechanism": "Pharmacodynamic — additive CNS depression"
+    },
+    {
+      "drug1": "Sertraline",
+      "drug2": "Alcohol",
+      "severity": "LOW",
+      "effect": "Alcohol increases CNS depression risk with SSRI. Sedation and impaired coordination.",
+      "recommendation": "Avoid excessive alcohol. Single drink usually safe. Monitor for sedation.",
+      "mechanism": "Pharmacodynamic — additive sedative effect"
+    }
+  ]
+}
+

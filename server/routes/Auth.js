@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
 
 const { signup, login, sendotp, doctorregistration, refresh, logout, getDoctorRegistrationStatus } = require("../Controllers/Auth");
 const { authenticateUser,isDoctor  } = require("../middleware/authMiddleware");
@@ -29,6 +30,18 @@ const {
 
 const { createOrder, verifyPayment } = require("../Controllers/Payment");
 
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype || !file.mimetype.startsWith("image/")) {
+      cb(new Error("Only image files are allowed"));
+      return;
+    }
+    cb(null, true);
+  },
+});
+
 
 router.post("/create-order", authenticateUser, createOrder);
 router.post("/verify-payment", authenticateUser, verifyPayment);
@@ -45,11 +58,11 @@ router.get("/doctor-registration/status", authenticateUser, getDoctorRegistratio
 
 router.get("/userprofile", authenticateUser, getUserProfile);
 router.put("/edituserProfile", authenticateUser, updateUserProfile);
-router.put("/updateuserprofilepicture", authenticateUser, updateuserDisplayPicture);
+router.put("/updateuserprofilepicture", authenticateUser, upload.single("displayPicture"), updateuserDisplayPicture);
 
 router.get("/doctorprofile/:doctorId", getDoctorProfile);
 router.put("/doctorprofile/:doctorId/editprofile", updateDoctorProfile);
-router.put("/updatedoctorprofilepicture", authenticateUser, updatedoctorDisplayPicture);
+router.put("/updatedoctorprofilepicture", authenticateUser, upload.single("displayPicture"), updatedoctorDisplayPicture);
 
 router.post("/searchdoctors", authenticateUser, searchdoctors);
 

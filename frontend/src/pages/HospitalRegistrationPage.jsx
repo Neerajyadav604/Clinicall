@@ -51,11 +51,11 @@ const SectionHeader = ({ children }) => (
 // ─── Stepper ───────────────────────────────────────────────────
 
 const Stepper = ({ steps, current }) => (
-  <div className="flex items-start justify-center px-2">
+  <div className="flex items-start justify-start sm:justify-center px-2 overflow-x-auto gap-1 sm:gap-2">
     {steps.map((step, i) => (
       <React.Fragment key={i}>
-        <div className="flex flex-col items-center">
-          <div className={"w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all " + (
+        <div className="flex flex-col items-center flex-shrink-0">
+          <div className={"w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold border-2 transition-all " + (
             i < current
               ? "bg-emerald-500 border-emerald-500 text-white"
               : i === current
@@ -63,19 +63,19 @@ const Stepper = ({ steps, current }) => (
               : "bg-white border-gray-300 text-gray-400"
           )}>
             {i < current ? (
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
             ) : i + 1}
           </div>
-          <span className={"mt-1.5 text-[10px] font-semibold uppercase tracking-wide " + (
+          <span className={"mt-1 text-[8px] sm:text-[10px] font-semibold uppercase tracking-wide text-center max-w-[60px] " + (
             i === current ? "text-emerald-600" : i < current ? "text-emerald-500" : "text-gray-400"
           )}>
             {step}
           </span>
         </div>
         {i < steps.length - 1 && (
-          <div className={"flex-1 h-0.5 mx-2 mt-4 " + (i < current ? "bg-emerald-500" : "bg-gray-200")} />
+          <div className={"hidden sm:flex flex-1 h-0.5 mx-1 sm:mx-2 mt-4 flex-shrink-0 w-4 sm:w-auto " + (i < current ? "bg-emerald-500" : "bg-gray-200")} />
         )}
       </React.Fragment>
     ))}

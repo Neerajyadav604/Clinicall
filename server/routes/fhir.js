@@ -53,6 +53,18 @@ const mailSender = require('../utils/mailSender');
 const generateConsentApprovedEmail = require('../utils/emailTemplates/consentApprovedEmail');
 const requirePayment = require('../middleware/requirePayment');
 
+const normalizePatientQueryId = (value) => {
+  if (!value) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  if (raw.startsWith('Patient/')) {
+    return raw.split('/')[1] || null;
+  }
+
+  return raw;
+};
+
 /**
  * FHIR R4 Capability Statement (Metadata)
  * Returns server capabilities and conformance
@@ -348,7 +360,7 @@ router.get('/Encounter/:id', authenticateUser, fhirReadLimiter, async (req, res,
  */
 router.get('/Condition', authenticateUser, fhirReadLimiter, consentMiddleware, requirePayment, async (req, res, next) => {
   try {
-    const patientId = req.query.patient || req.query.subject;
+    const patientId = normalizePatientQueryId(req.query.patient || req.query.subject);
 
     if (!patientId) {
       return next(new AppError('patient or subject parameter required', 400));
@@ -2115,7 +2127,7 @@ router.post('/DocumentReference', authenticateUser, isDoctor, fhirWriteLimiter, 
  */
 router.get('/DocumentReference', authenticateUser, consentMiddleware, async (req, res, next) => {
   try {
-    const patientId = req.query.patient;
+    const patientId = normalizePatientQueryId(req.query.patient);
     const { type, date } = req.query;
 
     if (!patientId) {

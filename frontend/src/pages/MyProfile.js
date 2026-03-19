@@ -31,6 +31,8 @@ import {
   setAllergies,
   setConditionsLoading,
   setAllergiesLoading,
+  setConditionsError,
+  setAllergiesError,
   setExportJobId,
   setExportLoading,
   updateExportJob,
@@ -88,17 +90,23 @@ const getFhirDisplay = (field) => {
 };
 
 const SectionShell = ({ title, subtitle, children }) => (
-  <section className="rounded-[20px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_16px_34px_-26px_rgba(2,6,23,0.45)] md:p-6">
-    <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-    {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
-    <div className="mt-5">{children}</div>
+  <section 
+    className="rounded-[20px] border bg-white p-4 sm:p-5 md:p-6 shadow-[0_16px_34px_-26px_rgba(2,6,23,0.45)]"
+    style={{
+      borderColor: "#d9e2ec",
+      backgroundColor: "#ffffff"
+    }}
+  >
+    <h2 className="text-base sm:text-lg md:text-xl font-semibold text-slate-900 leading-tight">{title}</h2>
+    {subtitle ? <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-slate-500 leading-relaxed">{subtitle}</p> : null}
+    <div className="mt-4 sm:mt-5 md:mt-6">{children}</div>
   </section>
 );
 
 const InfoTile = ({ label, value }) => (
-  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-    <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
-    <p className="mt-1 text-sm font-semibold text-slate-800">{value || "Not set"}</p>
+  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4 md:p-5 min-h-[60px] sm:min-h-[70px] flex flex-col justify-center">
+    <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">{label}</p>
+    <p className="mt-0.5 sm:mt-1 text-sm sm:text-base font-semibold text-slate-800 leading-tight">{value || "Not set"}</p>
   </div>
 );
 
@@ -112,7 +120,7 @@ const InputField = ({
   placeholder = "",
 }) => (
   <div>
-    <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <label className="mb-1.5 sm:mb-2 block text-xs sm:text-xs font-semibold uppercase tracking-wide text-slate-500">
       {label}
     </label>
     <input
@@ -121,10 +129,10 @@ const InputField = ({
       value={value || ""}
       onChange={onChange}
       placeholder={placeholder}
-      className={`w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20 ${error ? "border-rose-400" : "border-slate-200"
+      className={`w-full rounded-xl border bg-white px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base text-slate-800 outline-none transition focus:border-cyan-700 focus:ring-2 focus:ring-cyan-700/20 min-h-[44px] ${error ? "border-rose-400" : "border-slate-200"
         }`}
     />
-    {error ? <p className="mt-1 text-xs text-rose-500">{error}</p> : null}
+    {error ? <p className="mt-1 sm:mt-1.5 text-xs text-rose-500 leading-relaxed">{error}</p> : null}
   </div>
 );
 
@@ -135,19 +143,19 @@ const PillList = ({ items, tone = "slate", icon: Icon, title }) => {
     slate: "border-slate-200 bg-slate-50 text-slate-700",
   };
   return (
-    <div className={`rounded-xl border p-4 ${tones[tone]}`}>
-      <p className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide">
-        {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
+    <div className={`rounded-xl border p-3 sm:p-4 md:p-5 ${tones[tone]}`}>
+      <p className="inline-flex items-center gap-1.5 text-xs sm:text-xs font-semibold uppercase tracking-wide leading-tight">
+        {Icon ? <Icon className="h-3.5 w-3.5 flex-shrink-0" /> : null}
         {title}
       </p>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-2 sm:mt-3 flex flex-wrap gap-2 sm:gap-2.5">
         {items.map((item, index) => {
           // ✅ Extract display text from FHIR objects or use string directly
           const displayValue = getFhirDisplay(item);
           // Skip empty values
           if (!displayValue) return null;
           return (
-            <span key={`${displayValue}-${index}`} className="rounded-full bg-white px-3 py-1 text-xs">
+            <span key={`${displayValue}-${index}`} className="rounded-full bg-white px-3 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-xs font-medium leading-tight">
               {displayValue}
             </span>
           );
@@ -310,22 +318,36 @@ const MyProfile = () => {
 
     const loadFhirData = async () => {
       try {
-        // Load conditions
         dispatch(setConditionsLoading(true));
-        const conditionsResponse = await getConditions(user._id, {
-          appointmentId: paidAppointmentId,
-        });
-        const conditionsList = conditionsResponse?.entry?.map((entry) => entry.resource) || [];
-        dispatch(setConditions(conditionsList));
-
-        // Load allergies
         dispatch(setAllergiesLoading(true));
-        const allergiesResponse = await getAllergies(user._id);
-        const allergiesList = allergiesResponse?.entry?.map((entry) => entry.resource) || [];
-        dispatch(setAllergies(allergiesList));
-      } catch (error) {
-        console.error("Error loading FHIR data:", error);
-        // Not fatal - just log the error
+        dispatch(setConditionsError(null));
+        dispatch(setAllergiesError(null));
+
+        try {
+          const conditionsResponse = await getConditions(user._id, {
+            appointmentId: paidAppointmentId,
+          });
+          const conditionsList = conditionsResponse?.entry?.map((entry) => entry.resource) || [];
+          dispatch(setConditions(conditionsList));
+        } catch (error) {
+          console.error("Error loading conditions:", error);
+          dispatch(setConditions([]));
+          dispatch(setConditionsError(
+            error?.response?.status === 403
+              ? "You don't have permission to view conditions."
+              : (error.message || "Failed to load conditions.")
+          ));
+        }
+
+        try {
+          const allergiesResponse = await getAllergies(user._id);
+          const allergiesList = allergiesResponse?.entry?.map((entry) => entry.resource) || [];
+          dispatch(setAllergies(allergiesList));
+        } catch (error) {
+          console.error("Error loading allergies:", error);
+          dispatch(setAllergies([]));
+          dispatch(setAllergiesError(error.message || "Failed to load allergies."));
+        }
       } finally {
         dispatch(setConditionsLoading(false));
         dispatch(setAllergiesLoading(false));
@@ -493,7 +515,7 @@ const MyProfile = () => {
   const userMedicalHistory = toList(user.medicalHistory);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--page)]">
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#f3f7fb" }}>
       {/* ── Sidebar ── */}
       <Sidebar open={sidebarOpen} setOpen={setSidebarOpen}>
         <SidebarBody className="justify-between gap-10 h-full min-h-screen">
@@ -534,11 +556,9 @@ const MyProfile = () => {
       {/* ── Main Content ── */}
       <div className="flex-1 overflow-y-auto md:ml-[260px]">
         <div
-          className="bg-[var(--page)] px-4 py-8 md:px-8"
+          className="px-4 py-8 md:px-8"
           style={{
-            "--page": "#f3f7fb",
-            "--surface": "#ffffff",
-            "--line": "#d9e2ec",
+            backgroundColor: "#f3f7fb",
           }}
         >
           <div className="mx-auto max-w-6xl space-y-6">

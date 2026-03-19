@@ -390,6 +390,7 @@ exports.updateuserDisplayPicture = async (req, res) => {
     console.log("\n=== DISPLAY PICTURE UPLOAD ===");
     console.log("User from auth middleware:", req.user ? req.user._id : "MISSING");
     console.log("Files received:", req.files ? Object.keys(req.files) : "NONE");
+    console.log("Multer file received:", req.file ? req.file.originalname : "NONE");
     
     if (!req.user) {
       return res.status(401).json({
@@ -398,14 +399,15 @@ exports.updateuserDisplayPicture = async (req, res) => {
       });
     }
 
-    if (!req.files || !req.files.displayPicture) {
+    const displayPicture = req.files?.displayPicture || req.file;
+
+    if (!displayPicture) {
       return res.status(400).json({
         success: false,
         message: "Display picture is required",
       });
     }
-    
-    const displayPicture = req.files.displayPicture;
+
     const userId = req.user._id; // extract from authenticated request
     
     const image = await uploadImageToCloudinary(
@@ -465,8 +467,9 @@ exports.updateuserDisplayPicture = async (req, res) => {
 };
 exports.updatedoctorDisplayPicture = async (req, res) => {
   try {
-  
-    if (!req.files || !req.files.displayPicture) {
+    const displayPicture = req.files?.displayPicture || req.file;
+
+    if (!displayPicture) {
       return res.status(400).json({
         success: false,
         message: "Display picture is required",
@@ -478,7 +481,7 @@ exports.updatedoctorDisplayPicture = async (req, res) => {
 
     
     const image = await uploadImageToCloudinary(
-      req.files.displayPicture,
+      displayPicture,
       process.env.FOLDER_NAME,
       1000,
       1000

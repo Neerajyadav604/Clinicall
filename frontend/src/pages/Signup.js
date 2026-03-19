@@ -53,8 +53,8 @@ const SignUp = () => {
 
     if (!formData.password.trim()) {
       nextErrors.password = "Password is required.";
-    } else if (formData.password.length < 8) {
-      nextErrors.password = "Password must be at least 8 characters.";
+    } else if (formData.password.length < 4) {
+      nextErrors.password = "Password must be at least 4 characters.";
     }
 
     if (!formData.confirmPassword.trim()) {

@@ -2,6 +2,24 @@ const { verifyAccessToken } = require('../utils/token');
 const User = require("../models/User");
 const Doctor = require("../models/Doctor");
 
+const normalizeScopes = (scopeValue) => {
+  if (!scopeValue) return [];
+  if (Array.isArray(scopeValue)) {
+    return scopeValue
+      .filter((scope) => typeof scope === "string" && scope.trim())
+      .map((scope) => scope.trim());
+  }
+
+  if (typeof scopeValue === "string") {
+    return scopeValue
+      .split(/\s+/)
+      .map((scope) => scope.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
 const authenticateUser = async (req, res, next) => {
   const timestamp = new Date().toISOString();
   console.log(`\n${'='.repeat(80)}`);
@@ -106,6 +124,16 @@ const authenticateUser = async (req, res, next) => {
     console.log(`${'='.repeat(80)}\n`);
     
     req.user = user;
+    req.userId = decoded.id;
+    req.userRole = decoded.role;
+    req.auth = {
+      tokenSubjectId: decoded.id,
+      role: decoded.role,
+      patientId: decoded.patientId || null,
+      fhirUser: decoded.fhirUser || null,
+      scope: decoded.scope || null,
+      scopes: normalizeScopes(decoded.scope),
+    };
     next();
   } catch (err) {
     const timestamp = new Date().toISOString();
