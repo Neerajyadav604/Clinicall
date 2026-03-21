@@ -277,7 +277,7 @@ const Chat = () => {
 
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `${process.env.REACT_APP_API_BASE_URL || "http://192.168.137.202:4000/api/v1/api/v1"}/upload/chat-file`,
+        `${process.env.REACT_APP_API_BASE_URL || "http://localhost:4000/api/v1"}/upload/chat-file`,
         {
           method: 'POST',
           headers: {

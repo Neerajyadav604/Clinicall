@@ -122,7 +122,8 @@ app.use(cors({
     'http://localhost:3000',    // React dev server
     'http://127.0.0.1:3000',   // Playwright sometimes uses 127.0.0.1
     process.env.CLIENT_URL,     // From .env if set
-    process.env.FRONTEND_URL    // Alternative env var
+    process.env.FRONTEND_URL,
+    'https://clinicall-5cjz.vercel.app'   // Alternative env var
   ].filter(Boolean),
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
