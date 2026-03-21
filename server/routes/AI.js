@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { symptomAnalysis, chat } = require('../controllers/AIController');
-const AIController = require('../controllers/AIController');
+const { symptomAnalysis, chat } = require('../Controllers/AIController');
+const AIController = require('../Controllers/AIController');
 const { authenticateUser } = require('../middleware/authMiddleware');
 
 router.post('/symptoms', authenticateUser, symptomAnalysis);
