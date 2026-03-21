@@ -2,6 +2,7 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "../pages/admin/AdminLayout";
 import AdminDashboard from "../pages/admin/AdminDashboard";
+import AdminProfile from "../pages/admin/AdminProfile";
 import DoctorRegistrations from "../pages/admin/DoctorRegistrations";
 import Appointments from "../pages/admin/Appointments";
 import Users from "../pages/admin/Users";
@@ -16,6 +17,7 @@ const AdminRoutes = () => {
     <AdminLayout>
       <Routes>
         <Route path="/" element={<AdminDashboard />} />
+        <Route path="/profile" element={<AdminProfile />} />
         <Route path="/registrations" element={<DoctorRegistrations />} />
         <Route path="/appointments" element={<Appointments />} />
         <Route path="/users" element={<Users />} />

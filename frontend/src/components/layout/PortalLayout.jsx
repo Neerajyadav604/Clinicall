@@ -16,6 +16,7 @@ const PortalLayout = ({
   contentClassName,
   containerClassName,
   topContent,
+  wrapperClassName,
 }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -78,9 +79,9 @@ const PortalLayout = ({
         </SidebarBody>
       </Sidebar>
 
-      <div className="flex min-w-0 flex-1 flex-col md:ml-16 lg:ml-[240px]">
+      <div className={cn("app-main-wrapper", wrapperClassName)}>
         <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur">
-          <div className="app-shell-container flex min-h-[72px] items-center justify-between gap-4 py-4">
+          <div className="flex min-h-[72px] items-center justify-between gap-4 px-6 py-4 md:px-8 lg:px-10">
             <div className="flex min-w-0 items-center gap-3">
               <button
                 type="button"
@@ -108,7 +109,7 @@ const PortalLayout = ({
               </div>
             ) : null}
           </div>
-          {topContent ? <div className="app-shell-container pb-4">{topContent}</div> : null}
+          {topContent ? <div className="px-6 py-4 md:px-8 lg:px-10">{topContent}</div> : null}
         </header>
 
         <main className={cn("app-shell-main", contentClassName)}>

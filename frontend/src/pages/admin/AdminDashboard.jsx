@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import AdminLayout from "./AdminLayout.jsx";
 import StatCard from "../../components/admin/StatCard";
 import { HiOutlineUsers, HiOutlineCalendar, HiOutlineCheckCircle, HiOutlineClock, HiOutlineOfficeBuilding, HiOutlineHome } from "react-icons/hi";
 import { getAdminStats } from "../../services/adminApi";
@@ -87,13 +88,12 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="space-y-6 sm:space-y-8 md:space-y-10">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 leading-tight">Dashboard</h1>
-          <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-1 sm:mt-2 md:mt-3 leading-relaxed">Welcome back! Here's what's happening today.</p>
-        </div>
-
+    <AdminLayout
+      title="Dashboard"
+      subtitle="Welcome back! Here's what's happening today."
+      fullWidth={true}
+    >
+      <div className="space-y-6 sm:space-y-8 md:space-y-10">
         {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 md:p-5">
@@ -186,7 +186,8 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
-    );
-  };
+    </AdminLayout>
+  );
+};
 
 export default AdminDashboard;

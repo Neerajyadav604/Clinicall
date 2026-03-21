@@ -25,6 +25,11 @@ export const getAdminLinks = (onLogout) => [
     icon: <LayoutDashboard className={iconClassName} />,
   },
   {
+    label: "My Profile",
+    href: "/admin/profile",
+    icon: <UserCog className={iconClassName} />,
+  },
+  {
     label: "Analytics",
     href: "/admin/analytics",
     icon: <BarChart3 className={iconClassName} />,

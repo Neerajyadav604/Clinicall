@@ -93,7 +93,7 @@ const Users = () => {
   };
 
   return (
-    <AdminLayout>
+    <div fullWidth={true}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         .au-root { font-family: 'Inter', system-ui, sans-serif; }
@@ -172,15 +172,7 @@ const Users = () => {
 
         {/* ── PAGE HEADER ── */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <h1 style={{ fontSize: 30, fontWeight: 800, color: "#0f172a", margin: 0, letterSpacing: "-0.02em" }}>
-              Admin Dashboard
-            </h1>
-            <p style={{ fontSize: 13.5, color: "#64748b", marginTop: 6, lineHeight: 1.6, maxWidth: 520 }}>
-              Manage users, doctors, hospitals, and operations from one responsive workspace.<br />
-              Clinical data visualization and role management refined for healthcare precision.
-            </p>
-          </div>
+          
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <button style={{
               padding: "9px 20px", borderRadius: 10, border: "1.5px solid #e2e8f0",
@@ -423,7 +415,7 @@ const Users = () => {
 
         </div>
       </div>
-    </AdminLayout>
+    </div>
   );
 };
 

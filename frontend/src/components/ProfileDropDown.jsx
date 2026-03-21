@@ -16,32 +16,12 @@ const ProfileDropDown = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   
-  // ✅ Get user from Redux store
+  // ✅ Get user from Redux store (logged-in user from profile slice)
   const { user } = useSelector((state) => state.profile);
+  
+  // Use the authenticated user directly - don't merge with doctorProfile or other stale data
   const resolvedUser = useMemo(() => {
-    const baseUser = user || {};
-
-    try {
-      const doctorProfileRaw = localStorage.getItem("doctorProfile");
-      if (doctorProfileRaw) {
-        const doctorProfile = JSON.parse(doctorProfileRaw);
-        return { ...baseUser, ...doctorProfile };
-      }
-    } catch (error) {
-      console.error("Failed to parse doctorProfile from localStorage:", error);
-    }
-
-    try {
-      const storedUserRaw = localStorage.getItem("user");
-      if (storedUserRaw) {
-        const storedUser = JSON.parse(storedUserRaw);
-        return { ...storedUser, ...baseUser };
-      }
-    } catch (error) {
-      console.error("Failed to parse user from localStorage:", error);
-    }
-
-    return baseUser;
+    return user || {};
   }, [user]);
 
   // Close dropdown on outside click
@@ -67,11 +47,11 @@ const ProfileDropDown = () => {
     const userRole = resolvedUser?.role?.toLowerCase();
 
     if (userRole === "admin") {
-      return "/admin";
+      return "/admin/profile";
     } else if (userRole === "doctor") {
-      return "/doctor";
+      return "/doctor/profile";
     } else if (userRole === "hospital_admin") {
-      return "/hospital-admin";
+      return "/hospital-admin/profile";
     }
 
     return "/my-profile";

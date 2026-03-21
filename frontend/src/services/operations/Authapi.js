@@ -124,6 +124,8 @@ export function login(email, password, navigate) {
 
       localStorage.setItem("token", accessToken);
       localStorage.setItem("user", JSON.stringify(userData));
+      // ✅ Clear any stale doctorProfile data from previous sessions
+      localStorage.removeItem("doctorProfile");
       startSessionTimers(accessToken);
       initAuthSession();
 
@@ -181,6 +183,8 @@ export function logout(navigate) {
   return (dispatch) => {
     dispatch(setToken(null))
     dispatch(setUser(null))
+    // ✅ Clear any stale data from previous sessions
+    localStorage.removeItem("doctorProfile");
     logoutSession({ reason: "manual", redirectTo: "/login" })
     if (navigate) navigate("/login")
   }

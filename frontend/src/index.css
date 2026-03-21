@@ -112,18 +112,73 @@
 }
 
 @layer components {
-  .app-shell-main {
-    @apply min-w-0 flex-1;
-    padding-block: 16px;
+  /* ✅ Main wrapper - offset for fixed sidebar */
+  .app-main-wrapper {
+    @apply flex min-w-0 flex-col;
+    width: 100%;
+    margin-left: 0;
+    min-height: 100vh;
   }
 
+  @media (min-width: 768px) {
+    .app-main-wrapper {
+      margin-left: 64px;
+      width: calc(100% - 64px);
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .app-main-wrapper {
+      margin-left: 210px;
+      width: calc(100% - 240px);
+    }
+  }
+
+  /* ✅ Full-width variant - no sidebar offset */
+  .app-main-wrapper.app-main-wrapper-fullwidth {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  @media (min-width: 768px) {
+    .app-main-wrapper.app-main-wrapper-fullwidth {
+      margin-left: 0;
+      width: 100%;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .app-main-wrapper.app-main-wrapper-fullwidth {
+      margin-left: 0;
+      width: 100%;
+    }
+  }
+
+  /* ✅ Header - sticky with proper z-index */
+  .app-main-wrapper > header {
+    @apply sticky top-0 z-30;
+  }
+
+  /* ✅ Main content - flex fill with consistent padding */
+  .app-shell-main {
+    @apply min-w-0 flex-1 flex-col;
+    padding-top: 24px;
+    padding-bottom: 40px;
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  /* ✅ Content container - consistent padding on all sides */
   .app-shell-container {
     width: 100%;
     max-width: 1600px;
-    margin-inline: auto;
-    padding-inline: clamp(16px, 4vw, 48px);
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
   }
 
+  /* ✅ Standardized sidebar shell spacing */
   .app-sidebar-shell {
     @apply gap-6;
   }
@@ -156,9 +211,13 @@
   }
 }
 
+/* ✅ Responsive adjustments */
 @media (min-width: 768px) {
   .app-shell-main {
-    padding-block: 24px;
+    padding-top: 32px;
+    padding-bottom: 48px;
+    padding-left: 32px;
+    padding-right: 32px;
   }
 
   .app-modal-panel {
@@ -171,7 +230,10 @@
 
 @media (min-width: 1024px) {
   .app-shell-main {
-    padding-block: 32px;
+    padding-top: 40px;
+    padding-bottom: 56px;
+    padding-left: 40px;
+    padding-right: 40px;
   }
 
   .dashboard-panels-grid {
@@ -181,7 +243,10 @@
 
 @media (min-width: 1536px) {
   .app-shell-main {
-    padding-block: 48px;
+    padding-top: 48px;
+    padding-bottom: 64px;
+    padding-left: 48px;
+    padding-right: 48px;
   }
 }
 
