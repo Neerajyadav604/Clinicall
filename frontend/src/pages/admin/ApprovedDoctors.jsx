@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import AdminLayout from "./AdminLayout";
 import TableComponent from "../../components/admin/TableComponent";
-import { HiOutlineEye } from "react-icons/hi";
 import { toast } from "react-toastify";
 import { getApprovedDoctors } from "../../services/adminApi";
 

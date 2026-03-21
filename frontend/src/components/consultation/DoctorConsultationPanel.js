@@ -46,7 +46,8 @@ const DoctorConsultationPanel = ({
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [sessionDuration, setSessionDuration] = useState(0);
-  const [socket, setSocket] = useState(null);
+  // eslint-disable-next-line no-unused-vars
+  const [_socket, _setSocket] = useState(null);
   const [attachmentFile, setAttachmentFile] = useState(null);
   const [attachmentTitle, setAttachmentTitle] = useState("");
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -127,7 +128,7 @@ const DoctorConsultationPanel = ({
       socketInstance.emit("join_consultation", { appointmentId });
     });
 
-    setSocket(socketInstance);
+    _setSocket(socketInstance);
 
     return () => socketInstance.disconnect();
   }, [appointmentId, baseURL, token]);

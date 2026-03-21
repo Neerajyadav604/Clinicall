@@ -62,6 +62,7 @@ export function NavBar({ items, logoText = "Clinicall", className }: NavBarProps
                     <div className="ml-auto hidden md:flex items-center">
                         <div className="flex items-center gap-1 rounded-full border border-border bg-background/5 px-1 py-1 shadow-lg">
                             {items.map((item) => {
+                                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                                 const Icon = item.icon
                                 const isActive = activeTab === item.name
                                 return (

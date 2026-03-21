@@ -392,7 +392,6 @@ const SymptomChecker = () => {
                   style={{ paddingLeft: 40 }}
                   aria-label="Search for symptoms"
                   aria-owns="symptom-dropdown"
-                  aria-expanded={showDropdown && filteredSymptoms.length > 0}
                 />
               </div>
 
@@ -404,6 +403,7 @@ const SymptomChecker = () => {
                       onClick={() => handleAddSymptom(symptom)}
                       className="sc-dropdown-item"
                       role="option"
+                      aria-selected={false}
                     >
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
                         style={{ marginRight: 8, flexShrink: 0, opacity: 0.4 }}>

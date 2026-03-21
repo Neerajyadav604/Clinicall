@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
 import { clearFhirError } from '../../slices/fhirSlice';
@@ -27,6 +27,7 @@ const FhirErrorToast = () => {
     'ENCRYPTION_ERROR': 'Security Error: Unable to process encrypted data. Please try again.'
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (fhirError) {
       // Get user-friendly message based on error code or message

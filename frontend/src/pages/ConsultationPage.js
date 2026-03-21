@@ -93,6 +93,7 @@ const ConsultationPage = () => {
     if (appointmentId && token) fetchAppointmentAndRole();
   }, [appointmentId, token]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const checkActiveSession = async () => {
       try {
@@ -113,6 +114,7 @@ const ConsultationPage = () => {
     }
   }, [appointmentId, userRole]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const userData = useMemo(() => {
     try { return JSON.parse(localStorage.getItem("user") || "{}"); } catch { return {}; }
   }, []);

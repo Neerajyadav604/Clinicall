@@ -23,7 +23,6 @@ const DocumentVault = ({ patientId, isDoctor = false }) => {
   const { documents, documentsLoading, documentsError } = useSelector(state => state.fhir);
   
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [selectedDocument, setSelectedDocument] = useState(null);
   const [uploadForm, setUploadForm] = useState({
     type: '',
     display: '',
@@ -35,6 +34,8 @@ const DocumentVault = ({ patientId, isDoctor = false }) => {
   const [filterType, setFilterType] = useState('');
 
   // Load documents on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!patientId) return;
     loadDocuments();

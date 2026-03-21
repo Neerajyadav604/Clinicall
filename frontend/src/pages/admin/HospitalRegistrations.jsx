@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import TableComponent from "../../components/admin/TableComponent";
-import { HiOutlineEye, HiOutlineCheck, HiOutlineX } from "react-icons/hi";
+import { HiOutlineEye, HiOutlineX } from "react-icons/hi";
 import { toast } from "react-toastify";
 import {
   getAdminHospitalRegistrations,

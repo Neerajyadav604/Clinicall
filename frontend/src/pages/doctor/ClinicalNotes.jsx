@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { AlertCircle, FileText, Loader, Check, X, Upload } from 'lucide-react';
+import { AlertCircle, FileText, Loader, Check, Upload } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 import { setConsents, setConsentsLoading } from '../../slices/fhirSlice';
@@ -73,7 +73,7 @@ const ConditionForm = ({ patientId, appointmentId, onSuccess }) => {
       .replace(/[{}]/g, '')           // Remove curly braces
       .replace(/\([^)]*\)/g, '')      // Remove text in parentheses
       .replace(/\s+/g, '')            // Remove spaces
-      .replace(/[^A-Z0-9\.\-]/g, ''); // Keep only alphanumeric, dots, hyphens
+      .replace(/[^A-Z0-9.-]/g, ''); // Keep only alphanumeric, dots, hyphens
     
     // Ensure it's not empty and valid
     return sanitized.substring(0, 20); // Max 20 chars for ICD codes
@@ -93,7 +93,7 @@ const ConditionForm = ({ patientId, appointmentId, onSuccess }) => {
     }
 
     // Validate code format: alphanumeric + dots/hyphens only
-    const codeRegex = /^[A-Z0-9\.\-]{1,20}$/i;
+    const codeRegex = /^[A-Z0-9.-]{1,20}$/i;
     if (!codeRegex.test(form.code.trim())) {
       errors.push(
         `Code contains invalid characters. Only alphanumeric, dots (.), and hyphens (-) allowed. ` +
@@ -968,6 +968,7 @@ const ClinicalNotes = () => {
   }, [patientId, user?._id, accessStatus.canAccess]);
 
   // Load appointment details + access status
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!appointmentId) return;
 
@@ -1032,6 +1033,7 @@ const ClinicalNotes = () => {
   }, [appointmentId]);
 
   // Load consents only when access is permitted
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!patientId || !accessStatus.canAccess) return;
     loadConsents();

@@ -28,7 +28,7 @@ import HospitalProfile from './pages/HospitalProfile';
 import HospitalAdminDashboard from './pages/HospitalAdminDashboard';
 import MedicalRecords from './pages/MedicalRecords';
 import FhirConnect from './pages/FhirConnect';
-import Test from './pages/Test'
+
 import { useEffect } from 'react';
 import { initAuthSession } from './services/authSession';
  import ConsultationPage from "./pages/ConsultationPage";
@@ -104,7 +104,7 @@ function App() {
           <Route path="/hospitals" element={<HospitalList />} />
           <Route path="/hospitals/:id" element={<HospitalProfile />} />
           <Route path="/hospital-admin" element={<HospitalAdminDashboard />} />
-          <Route path="/test" element={<Test />} />
+         
 
           <Route path="/doctor/*" element={<DoctorRoutes />} />
           <Route path="/admin/*" element={<AdminRoutes />} />

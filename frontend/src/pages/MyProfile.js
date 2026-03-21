@@ -9,7 +9,6 @@ import {
   Phone,
   Pill,
   ShieldCheck,
-  UserRound,
   LayoutDashboard,
   ClipboardList,
   Calendar,
@@ -22,6 +21,7 @@ import {
   fetchUserProfile,
   updateDisplayPicture,
 } from "../services/operations/Profileapi";
+import { logout, getDoctorRegistrationStatus } from "../services/operations/Authapi";
 import { getConditions, getAllergies, triggerExport, pollExportStatus, getPendingConsentRequests } from "../services/fhirApi";
 import { getUserRequests } from "../services/operations/requestApi";
 import {
@@ -36,12 +36,9 @@ import {
   updateExportJob,
   clearExportJob,
   setConsentRequests,
-  setConsentRequestsLoading
+  setConsentRequestsLoading,
 } from "../slices/fhirSlice";
-import AvatarUploader from "../components/profile/AvatarUploader";
-import UtilitiesPanel from "../components/profile/UtilitiesPanel";
 import { Sidebar, SidebarBody, SidebarLinkItem } from "../components/ui/sidebar";
-import { getDoctorRegistrationStatus, logout } from "../services/operations/Authapi";
 import ConsentManager from "../components/consent/ConsentManager";
 import AccessLogViewer from "../components/consent/AccessLogViewer";
 import DocumentVault from "../components/clinical/DocumentVault";

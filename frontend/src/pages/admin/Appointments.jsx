@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import TableComponent from "../../components/admin/TableComponent";
-import { HiOutlineCheck, HiOutlineX, HiOutlineEye } from "react-icons/hi";
+import { HiOutlineCheck, HiOutlineX } from "react-icons/hi";
 import { toast } from "react-toastify";
 import {
   getAppointments,
@@ -13,8 +13,9 @@ const Appointments = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState("all");
-  const [actionLoading, setActionLoading] = useState(false);
+  const [_actionLoading, _setActionLoading] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchAppointments();
   }, [selectedStatus]);

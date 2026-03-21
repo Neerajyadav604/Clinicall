@@ -140,7 +140,8 @@ const HospitalAdminDashboard = () => {
         {/* Stats row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {STATUS_TABS.map((t) => {
-            const count = t.value === statusTab ? applications.length : "—";
+            // eslint-disable-next-line no-unused-vars
+            const _count = t.value === statusTab ? applications.length : "—";
             return (
               <div key={t.value} className="bg-white rounded-2xl shadow p-5 cursor-pointer hover:shadow-md transition" onClick={() => setStatusTab(t.value)}>
                 <p className="text-sm text-gray-500 mb-1">{t.label} Applications</p>

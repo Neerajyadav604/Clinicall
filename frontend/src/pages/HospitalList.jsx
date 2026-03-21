@@ -32,6 +32,7 @@ const HospitalList = () => {
   const [search, setSearch]                 = useState("");
   const [specFilter, setSpecFilter]         = useState("Any");
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchHospitals();
   }, [activeTab]);

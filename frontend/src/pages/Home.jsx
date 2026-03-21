@@ -1,6 +1,5 @@
 import React from 'react'
 import { useSelector } from "react-redux";
-import doctorMask from "../assets/doctor_mask.png";
 import WhyChooseUs from '../components/WhyChooseUs';
 import HowItWorks from '../components/HowItWroks';
 import DoctorCTA from '../components/DoctorCTA';

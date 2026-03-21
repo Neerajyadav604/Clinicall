@@ -8,10 +8,8 @@ import {
   Calendar,
   UserCog,
   LogOut,
-  Loader,
   Shield,
   X,
-  Download,
   AlertCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -30,8 +28,6 @@ import {
   setDiagnosticReportsLoading,
   setProceduresLoading,
   setImmunizationsLoading,
-  setConsentRequests,
-  setConsentRequestsLoading,
 } from "../slices/fhirSlice";
 import { getUserRequests } from "../services/operations/requestApi";
 import {
@@ -40,9 +36,7 @@ import {
 } from "../services/operations/consultationApi";
 import { Sidebar, SidebarBody, SidebarLinkItem } from "../components/ui/sidebar";
 import { logout } from "../services/operations/Authapi";
-import jsPDF from "jspdf";
 // Clinical UI Components
-import AllergyWarningBanner from "../components/clinical/AllergyWarningBanner";
 import MedicalTimeline from "../components/clinical/MedicalTimeline";
 import VitalSignsChart from "../components/clinical/VitalSignsChart";
 import MedicationList from "../components/clinical/MedicationList";
@@ -137,27 +131,29 @@ const MedicalRecords = () => {
   const { user } = useSelector((state) => state.profile);
   const {
     conditions,
-    conditionsLoading,
-    allergies,
-    allergiesLoading,
+    _conditionsLoading,
     observations,
-    observationsLoading,
-    medications,
-    medicationsLoading,
-    diagnosticReports,
-    diagnosticReportsLoading,
+    _observationsLoading,
     procedures,
-    proceduresLoading,
+    _proceduresLoading,
     immunizations,
-    immunizationsLoading,
+    _immunizationsLoading,
+    medications,
+    _medicationsLoading,
+    diagnosticReports,
+    _diagnosticReportsLoading,
+    _allergies,
+    _allergiesLoading,
   } = useSelector((state) => state.fhir);
 
   // Local state for consultation records
   const [consultationLoading, setConsultationLoading] = useState(false);
   const [consultationError, setConsultationError] = useState(null);
   const [showHIPAABanner, setShowHIPAABanner] = useState(true);
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [exportResourceTypes, setExportResourceTypes] = useState([]);
+  // eslint-disable-next-line no-unused-vars
+  const [_showExportModal, _setShowExportModal] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [_exportResourceTypes, _setExportResourceTypes] = useState([]);
   const [paidAppointmentIds, setPaidAppointmentIds] = useState([]);
   const [hasAnyPaidConsultation, setHasAnyPaidConsultation] = useState(false);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
@@ -462,7 +458,8 @@ const MedicalRecords = () => {
   }, [user?._id, dispatch, paidAppointmentIds, appointmentsLoading]);
 
   // Handle PDF export for a specific record
-  const handleExportRecord = async (recordId, recordTitle) => {
+  // eslint-disable-next-line no-unused-vars
+  const _handleExportRecord = async (recordId, recordTitle) => {
     try {
       const pdfBlob = await downloadRecord(recordId);
       // Create a download link

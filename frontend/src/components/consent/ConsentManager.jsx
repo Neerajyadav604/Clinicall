@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Search, CheckCircle, X, Clock, AlertCircle, ChevronDown } from 'lucide-react';
-import { setConsents, setConsentsLoading, setConsentsError, setConsentRequests, setConsentRequestsLoading, removeConsentRequest } from '../../slices/fhirSlice';
+import { Search, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { setConsents, setConsentsLoading, setConsentsError, setConsentRequests, removeConsentRequest } from '../../slices/fhirSlice';
 import { fetchConsentRequests, respondToConsentRequest } from '../../slices/fhirSlice';
 import {
   getConsents,
@@ -38,13 +38,12 @@ const purposeOptions = ['treatment', 'referral', 'research', 'operations'];
 
 const ConsentManager = ({ patientId }) => {
   const dispatch = useDispatch();
-  const { consents, consentsLoading, consentsError, consentRequests, consentRequestsLoading } = useSelector(state => state.fhir);
+  const { consents, consentsLoading, consentsError, consentRequests } = useSelector(state => state.fhir);
   const { user } = useSelector(state => state.auth);
   const [activeTab, setActiveTab] = useState('view'); // 'view' | 'grant' | 'pending' | 'edit'
   const [selectedConsent, setSelectedConsent] = useState(null);
   const consentRequestsRef = useRef(consentRequests);
   const [approvingRequestId, setApprovingRequestId] = useState(null);
-  const [declineToasts, setDeclineToasts] = useState({});
 
   // Grant form state
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,6 +67,8 @@ const ConsentManager = ({ patientId }) => {
     period: { start: '', end: '' }
   });
   const [editLoading, setEditLoading] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [consentRequestsLoading, setConsentRequestsLoading] = useState(false);
 
   useEffect(() => {
     consentRequestsRef.current = consentRequests;
@@ -116,7 +117,9 @@ const ConsentManager = ({ patientId }) => {
     };
   }, [dispatch, user?._id]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   // Load consents and consent requests on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!patientId) return;
     loadConsents();

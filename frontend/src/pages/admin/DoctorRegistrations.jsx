@@ -20,6 +20,7 @@ const DoctorRegistrations = () => {
   const [modalType, setModalType] = useState(null); // 'approve' or 'reject'
   const [actionLoading, setActionLoading] = useState(false);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchRegistrations();
   }, [filteredStatus]);

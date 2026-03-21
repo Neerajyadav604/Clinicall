@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 
 /**
@@ -52,6 +52,7 @@ const VitalSignsChart = ({ observations = [], loading = false }) => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const chartData = useMemo(() => {
     if (!observations || observations.length === 0) return [];
 

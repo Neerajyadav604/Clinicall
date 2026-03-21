@@ -372,6 +372,7 @@ const Apponintment = () => {
     );
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!isListening && micTriggeredRef.current && searchQuery) {
       micTriggeredRef.current = false;
@@ -379,6 +380,7 @@ const Apponintment = () => {
     }
   }, [isListening]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop();

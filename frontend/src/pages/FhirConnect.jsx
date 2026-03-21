@@ -2,7 +2,7 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
-import { Key, CloudUpload, CloudDownload, RefreshCw, Check, X, AlertTriangle, Info, Building2, Loader } from 'lucide-react';
+import { Key, CloudUpload, CloudDownload, RefreshCw, Check, X, AlertTriangle, Building2, Loader } from 'lucide-react';
 import { fhirApi } from '../services/fhirApi';
 import { syncPatientThunk, checkConnectionStatusThunk } from '../slices/fhirSlice';
 

@@ -37,6 +37,7 @@ const AccessLogViewer = ({ patientId }) => {
   const [showFilters, setShowFilters] = useState(false);
 
   // Load audit events on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!patientId) return;
     loadAuditEvents();

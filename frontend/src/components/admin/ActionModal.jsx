@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { HiOutlineX, HiOutlineExclamationIcon } from "react-icons/hi";
+import { HiOutlineX } from "react-icons/hi";
 
 const ActionModal = ({ isOpen, onClose, doctor, type, onApprove, onReject }) => {
   const [rejectionReason, setRejectionReason] = useState("");

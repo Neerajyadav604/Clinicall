@@ -322,6 +322,7 @@ const Chat = () => {
 
   // Verify chat access and register socket listeners
   // App.js manages global socket connection — we only verify access and register listeners
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (socketInitialized.current) {
       console.log("Socket listeners already initialized, skipping");

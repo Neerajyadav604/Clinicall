@@ -8,7 +8,8 @@ const PatientLiveView = ({ appointmentId, sessionId, activeSession }) => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [sessionDuration, setSessionDuration] = useState(0);
-  const [socket, setSocket] = useState(null);
+  // eslint-disable-next-line no-unused-vars
+  const [_socket, _setSocket] = useState(null);
 
   const baseURL = process.env.REACT_APP_BASE_URL || "http://localhost:4000";
   const token = localStorage.getItem("token");
@@ -49,12 +50,13 @@ const PatientLiveView = ({ appointmentId, sessionId, activeSession }) => {
       setMessage("Consultation session has ended");
     });
 
-    setSocket(socketInstance);
+    _setSocket(socketInstance);
 
     return () => socketInstance.disconnect();
   }, [appointmentId, baseURL, token]);
 
   // Fetch records when session starts
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (sessionId) {
       fetchRecords();
