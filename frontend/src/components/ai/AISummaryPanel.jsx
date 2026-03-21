@@ -7,14 +7,16 @@ import {
   setMlError,
   setMlServiceDown,
   selectRecordSummary,
+  selectMlError,
   selectMlLoading,
   selectMlServiceDown,
 } from "../../slices/mlSlice";
 
 const AISummaryPanel = () => {
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth || {});
+  const { user } = useSelector((state) => state.profile || {});
   const recordSummary = useSelector(selectRecordSummary);
+  const error = useSelector(selectMlError);
   const loading = useSelector(selectMlLoading);
   const mlServiceDown = useSelector(selectMlServiceDown);
 
@@ -134,6 +136,12 @@ const AISummaryPanel = () => {
         <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
           <span className="font-semibold">⚠️ AI features are temporarily unavailable.</span> The ML service may be
           starting up. Please try again in a moment.
+        </div>
+      )}
+
+      {error.summary && !loading.summary && (
+        <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          {error.summary}
         </div>
       )}
 

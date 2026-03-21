@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import DoctorLayout from "../../components/DoctorLayout";
 import { getDoctorProfile, updateDoctorProfile, uploadDoctorProfileImage } from "../../services/doctorApi";
+import { setUser } from "../../slices/ProfileSlice";
 import { toast } from "react-toastify";
 
 /**
@@ -10,6 +12,7 @@ import { toast } from "react-toastify";
  */
 const DoctorEditProfile = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -41,6 +44,7 @@ const DoctorEditProfile = () => {
         const response = await getDoctorProfile();
         const doctorData = response.data || response.user || response;
         setProfile(doctorData);
+        dispatch(setUser(doctorData));
 
         // Populate form data
         setFormData({
@@ -71,7 +75,7 @@ const DoctorEditProfile = () => {
     };
 
     fetchDoctorProfile();
-  }, [navigate]);
+  }, [dispatch]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -205,7 +209,9 @@ const DoctorEditProfile = () => {
       if (response.success) {
         // Update localStorage with new profile data
         if (response.data) {
-          localStorage.setItem("doctorProfile", JSON.stringify(response.data));
+          const mergedProfile = { ...updatedProfile, ...response.data };
+          localStorage.setItem("doctorProfile", JSON.stringify(mergedProfile));
+          dispatch(setUser(mergedProfile));
         }
 
         toast.dismiss(toastId);

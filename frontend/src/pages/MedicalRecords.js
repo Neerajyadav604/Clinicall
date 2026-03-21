@@ -570,7 +570,7 @@ const MedicalRecords = () => {
       </Sidebar>
 
       {/* ── Main Content ── */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto md:ml-16 lg:ml-[240px]">
         <div
           className="px-4 py-8 md:px-8"
           style={{

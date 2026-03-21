@@ -1,20 +1,11 @@
-import React, { useState, useCallback } from "react";
+import React from "react";
 import "./UserProfile.css";
-import {
-    MapPin, Mail, Phone, Calendar, Cake, User2,
-    Droplet, Eye, EyeOff, Camera, MoreVertical,
-    Pencil, Link2, Phone as PhoneIcon, Shield,
-    AlertTriangle, ClipboardList, Pill,
-    CheckCircle,
-} from "lucide-react";
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const formatDate = (dateStr) => {
     if (!dateStr) return null;
     const d = new Date(dateStr);
     if (isNaN(d)) return dateStr;
-    return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    return d.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
 };
 
 const toTitleCase = (str) => {
@@ -28,336 +19,251 @@ const toList = (value) => {
     return [value];
 };
 
-const NotProvided = () => <span className="not-provided">Not provided</span>;
-
-// ─── Chip ────────────────────────────────────────────────────────────────────
-
-const Chip = ({ label, color = "blue" }) => (
-    <span className={`chip chip--${color}`}>{label}</span>
-);
-
-// ─── Meta Pill ────────────────────────────────────────────────────────────────
-
-const MetaPill = ({ icon: Icon, label, color = "blue", masked = false, revealed = false, onReveal }) => {
-    const colorMap = {
-        blue: "bg-blue-50   text-blue-700   border-blue-200",
-        teal: "bg-teal-50   text-teal-700   border-teal-200",
-        purple: "bg-purple-50 text-purple-700 border-purple-200",
-        orange: "bg-orange-50 text-orange-700 border-orange-200",
-        indigo: "bg-indigo-50 text-indigo-700 border-indigo-200",
-        red: "bg-red-50    text-red-700    border-red-200",
-    };
-
-    return (
-        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium ${colorMap[color] || colorMap.blue}`}>
-            <Icon className="h-3.5 w-3.5 flex-shrink-0" />
-            {masked ? (
-                <span className={revealed ? "revealed-value" : "masked-value"}>
-                    {revealed ? label : "••••••••"}
-                </span>
-            ) : (
-                <span>{label || <NotProvided />}</span>
-            )}
-            {masked && (
-                <button onClick={onReveal} className="ml-1 opacity-60 hover:opacity-100 transition-opacity">
-                    {revealed ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                </button>
-            )}
-        </div>
-    );
-};
-
-// ─── Masked Field ─────────────────────────────────────────────────────────────
-
-const MaskedField = ({ value, fieldKey, revealed, onToggle }) => {
-    if (!value) return <NotProvided />;
-    return (
-        <div className="flex items-center gap-2">
-            <span className={revealed[fieldKey] ? "revealed-value" : "masked-value"}>
-                {revealed[fieldKey] ? value : "••••••••••••••"}
-            </span>
-            <button
-                onClick={() => onToggle(fieldKey)}
-                className="text-gray-400 hover:text-gray-700 transition-colors"
-                aria-label={revealed[fieldKey] ? "Hide" : "Show"}
-            >
-                {revealed[fieldKey] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-        </div>
-    );
-};
-
-// ─── Chip List ────────────────────────────────────────────────────────────────
-
-const ChipList = ({ items, color, fieldKey, revealed, onToggle, masked = false }) => {
-    const list = toList(items);
-    if (!list.length) return <p className="not-provided">None recorded</p>;
-
-    if (masked && !revealed[fieldKey]) {
-        return (
-            <div className="flex items-center gap-2">
-                <span className="masked-value">••••••••••••</span>
-                <button onClick={() => onToggle(fieldKey)} className="text-gray-400 hover:text-gray-700 transition-colors">
-                    <Eye className="h-4 w-4" />
-                </button>
-            </div>
-        );
-    }
-
-    return (
-        <div className="flex flex-wrap gap-2">
-            {list.map((item, i) => (
-                <Chip key={i} label={item} color={color} />
-            ))}
-            {masked && (
-                <button onClick={() => onToggle(fieldKey)} className="text-gray-400 hover:text-gray-700 transition-colors ml-1">
-                    <EyeOff className="h-4 w-4" />
-                </button>
-            )}
-        </div>
-    );
-};
-
-// ─── Info Card ────────────────────────────────────────────────────────────────
-
-const InfoCard = ({ icon: Icon, iconBg, title, children }) => (
-    <div className="rounded-2xl bg-white shadow-md p-5 border border-gray-100 flex flex-col gap-3">
-        <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${iconBg}`}>
-                <Icon className="h-4.5 w-4.5" />
-            </div>
-            <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
-        </div>
-        <div className="pl-12">{children}</div>
-    </div>
-);
-
-// ─── UserProfile ──────────────────────────────────────────────────────────────
-
 const UserProfile = ({ user = {}, profile = {}, onEditProfile }) => {
-    const [revealed, setRevealed] = useState({});
-
-    const toggleReveal = useCallback((key) => {
-        setRevealed((prev) => ({ ...prev, [key]: !prev[key] }));
-    }, []);
-
-    const copyLink = () => {
-        const url = `${window.location.origin}/profile`;
-        navigator.clipboard.writeText(url).then(() => alert("Profile link copied!"));
-    };
-
-    // Avatar: prefer profile image, then user image, then placeholder
-    const avatarSrc =
-        profile?.image ||
-        user?.image ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || "User")}&background=3b82f6&color=fff&size=128`;
-
-    const insurance = profile?.insurance || {};
+    const avatarSrc = profile?.image || user?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || "User")}&background=3b82f6&color=fff&size=128`;
 
     return (
-        <div className="user-profile-root min-h-screen bg-gray-50 pb-12">
-
-            {/* ── Cover Banner ── */}
-            <div className="relative w-full">
-                <div className="cover-banner w-full h-44 rounded-b-3xl relative overflow-hidden">
-                    {/* Top-right controls */}
-                    <div className="absolute top-4 right-4 flex items-center gap-2">
-                        <button className="bg-white/70 backdrop-blur-sm hover:bg-white text-gray-600 rounded-full p-2 transition-all shadow">
-                            <Camera className="h-4 w-4" />
-                        </button>
-                        <button className="bg-white/70 backdrop-blur-sm hover:bg-white text-gray-600 rounded-full p-2 transition-all shadow">
-                            <MoreVertical className="h-4 w-4" />
-                        </button>
-                    </div>
-
-                    {/* Decorative dots */}
-                    <div className="absolute bottom-6 right-8 w-12 h-12 rounded-full border-4 border-white/30 opacity-40" />
-                    <div className="absolute top-10 left-1/2 w-20 h-20 rounded-full border-4 border-blue-300/20 opacity-30" />
-                </div>
-
-                {/* Avatar overlapping banner */}
-                <div className="avatar-wrapper">
-                    <div className="relative">
-                        <img
-                            src={avatarSrc}
-                            alt={user?.fullName || "Profile"}
-                            className="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover"
-                            onError={(e) => {
-                                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || "U")}&background=3b82f6&color=fff&size=128`;
-                            }}
-                        />
-                        <button className="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-1.5 shadow-md hover:bg-blue-700 transition-colors">
-                            <Camera className="h-3.5 w-3.5" />
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* ── Content container ── */}
-            <div className="max-w-2xl mx-auto px-4 pt-16 space-y-5">
-
-                {/* ── Identity Row ── */}
-                <div className="flex items-start justify-between flex-wrap gap-3 pt-2">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">
-                            {user?.fullName || <NotProvided />}
-                        </h1>
-                        <p className="text-sm text-gray-500 mt-0.5">
-                            {toTitleCase(user?.role) || "Patient"} &nbsp;·&nbsp; Clinicall Healthcare
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                        <button
-                            onClick={onEditProfile}
-                            className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-full transition-all shadow-md"
-                        >
-                            <Pencil className="h-3.5 w-3.5" />
-                            Edit Profile
-                        </button>
-                        <button
-                            onClick={copyLink}
-                            className="inline-flex items-center gap-1.5 bg-white hover:bg-gray-50 text-gray-600 text-xs font-semibold px-3 py-2 rounded-full border border-gray-200 transition-all shadow-sm"
-                        >
-                            <Link2 className="h-3.5 w-3.5" />
-                            Copy Link
-                        </button>
-                    </div>
-                </div>
-
-                {/* ── Meta Pills ── */}
-                <div className="flex flex-wrap gap-2">
-                    <MetaPill
-                        icon={MapPin}
-                        label={profile?.address}
-                        color="blue"
-                        masked
-                        revealed={revealed["address"]}
-                        onReveal={() => toggleReveal("address")}
-                    />
-                    <MetaPill icon={Mail} label={user?.email} color="blue" />
-                    <MetaPill icon={Phone} label={user?.contact} color="teal" />
-                    <MetaPill
-                        icon={Calendar}
-                        label={`Joined ${formatDate(user?.createdAt)}`}
-                        color="purple"
-                    />
-                    {profile?.dob && (
-                        <MetaPill icon={Cake} label={formatDate(profile.dob)} color="orange" />
-                    )}
-                    {profile?.gender && (
-                        <MetaPill icon={User2} label={toTitleCase(profile.gender)} color="indigo" />
-                    )}
-                    {profile?.bloodGroup && (
-                        <MetaPill icon={Droplet} label={profile.bloodGroup} color="red" />
-                    )}
-                </div>
-
-                {/* ── About ── */}
-                <div className="bg-white rounded-2xl shadow-md p-5 border border-gray-100">
-                    <h2 className="text-base font-semibold text-gray-800 mb-2">About</h2>
-                    <p className="text-sm text-gray-500 leading-relaxed">
-                        {profile?.bio ||
-                            "Healthcare professional actively managing appointments and medical records through Clinicall. Committed to health-first living and proactive wellness."}
-                    </p>
-                    <hr className="mt-4 border-gray-100" />
-                </div>
-
-                {/* ── Medical Info Grid ── */}
-                <div>
-                    <h2 className="text-base font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                        <CheckCircle className="h-4 w-4 text-blue-500" />
-                        Medical Information
-                    </h2>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                        {/* Emergency Contact */}
-                        <InfoCard icon={PhoneIcon} iconBg="bg-red-50 text-red-600" title="Emergency Contact">
-                            <MaskedField
-                                value={profile?.emergencyContact}
-                                fieldKey="emergencyContact"
-                                revealed={revealed}
-                                onToggle={toggleReveal}
-                            />
-                        </InfoCard>
-
-                        {/* Insurance */}
-                        <InfoCard icon={Shield} iconBg="bg-blue-50 text-blue-600" title="Insurance">
-                            <div className="space-y-1">
-                                <p className="text-xs text-gray-400 mb-1">Provider</p>
-                                <MaskedField
-                                    value={insurance?.provider}
-                                    fieldKey="insuranceProvider"
-                                    revealed={revealed}
-                                    onToggle={toggleReveal}
-                                />
-                                <p className="text-xs text-gray-400 mt-2 mb-1">Policy Number</p>
-                                <MaskedField
-                                    value={insurance?.policyNumber}
-                                    fieldKey="insurancePolicy"
-                                    revealed={revealed}
-                                    onToggle={toggleReveal}
+        <div className="stitch-profile-container bg-stitch-background text-stitch-on-background min-h-screen">
+            <main className="max-w-7xl mx-auto p-6 md:p-8">
+                {/* Profile Overview Header */}
+                <header className="flex flex-col gap-6 mb-8">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                        <div className="flex items-center gap-5">
+                            <div className="w-20 h-20 rounded-full bg-stitch-primary-fixed flex items-center justify-center border-4 border-white shadow-lg overflow-hidden shrink-0">
+                                <img
+                                    alt={user?.fullName || "Profile"}
+                                    className="w-full h-full object-cover"
+                                    src={avatarSrc}
                                 />
                             </div>
-                        </InfoCard>
-
-                        {/* Allergies */}
-                        <InfoCard icon={AlertTriangle} iconBg="bg-red-50 text-red-600" title="Allergies">
-                            <ChipList
-                                items={profile?.allergies}
-                                color="red"
-                                fieldKey="allergies"
-                                revealed={revealed}
-                                onToggle={toggleReveal}
-                                masked={false}
-                            />
-                        </InfoCard>
-
-                        {/* Medical History */}
-                        <InfoCard icon={ClipboardList} iconBg="bg-blue-50 text-blue-600" title="Medical History">
-                            <ChipList
-                                items={profile?.medicalHistory}
-                                color="blue"
-                                fieldKey="medicalHistory"
-                                revealed={revealed}
-                                onToggle={toggleReveal}
-                                masked={true}
-                            />
-                        </InfoCard>
-
-                        {/* Medications */}
-                        <InfoCard icon={Pill} iconBg="bg-green-50 text-green-600" title="Current Medications">
-                            <ChipList
-                                items={profile?.medications}
-                                color="green"
-                                fieldKey="medications"
-                                revealed={revealed}
-                                onToggle={toggleReveal}
-                                masked={true}
-                            />
-                        </InfoCard>
-
-                        {/* Quick Stats card */}
-                        <div className="rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 shadow-md p-5 text-white flex flex-col gap-3">
-                            <h3 className="text-sm font-semibold opacity-90">Quick Stats</h3>
-                            <div className="grid grid-cols-2 gap-3">
-                                {[
-                                    { label: "Blood Group", value: profile?.bloodGroup },
-                                    { label: "Gender", value: toTitleCase(profile?.gender) },
-                                    { label: "DOB", value: formatDate(profile?.dob) },
-                                    { label: "Role", value: toTitleCase(user?.role) },
-                                ].map(({ label, value }) => (
-                                    <div key={label} className="bg-white/15 rounded-xl p-2.5">
-                                        <p className="text-[10px] uppercase tracking-wide opacity-70">{label}</p>
-                                        <p className="text-sm font-bold mt-0.5">{value || "—"}</p>
-                                    </div>
-                                ))}
+                            <div>
+                                <h2 className="text-3xl font-bold font-headline text-stitch-on-background tracking-tight">
+                                    {user?.fullName || "Not provided"}
+                                </h2>
+                                <p className="text-stitch-on-surface-variant flex items-center gap-2 mt-1">
+                                    <span className="material-symbols-outlined text-sm">location_on</span>
+                                    {profile?.address || "Address not provided"}
+                                </p>
                             </div>
                         </div>
+                        <div className="flex gap-3 w-full sm:w-auto">
+                            <button
+                                onClick={onEditProfile}
+                                className="flex-1 sm:flex-none bg-stitch-surface-container-high text-stitch-primary px-5 py-2.5 rounded-md font-medium text-sm transition-colors hover:bg-stitch-surface-container-highest flex items-center justify-center gap-2"
+                            >
+                                <span className="material-symbols-outlined text-[1.2rem]">edit</span>
+                                Edit Profile
+                            </button>
+                            <button className="flex-1 sm:flex-none primary-gradient text-white px-6 py-2.5 rounded-md font-medium text-sm shadow-md hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+                                <span className="material-symbols-outlined text-[1.2rem]">share</span>
+                                Export Records
+                            </button>
+                        </div>
+                    </div>
 
+                    {/* Bento Grid: Top Metrics */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                        <div className="bg-stitch-surface-container-lowest p-6 rounded-xl shadow-[0px_20px_40px_rgba(0,71,141,0.04)]">
+                            <p className="text-stitch-on-surface-variant text-[0.6875rem] font-bold uppercase tracking-wider mb-2">Member Since</p>
+                            <p className="text-lg font-headline font-bold text-stitch-primary">{formatDate(user?.createdAt) || "N/A"}</p>
+                        </div>
+                        <div className="bg-stitch-surface-container-lowest p-6 rounded-xl shadow-[0px_20px_40px_rgba(0,71,141,0.04)]">
+                            <p className="text-stitch-on-surface-variant text-[0.6875rem] font-bold uppercase tracking-wider mb-2">Gender</p>
+                            <p className="text-lg font-headline font-bold text-stitch-primary">{toTitleCase(profile?.gender) || "N/A"}</p>
+                        </div>
+                        <div className="bg-stitch-surface-container-lowest p-6 rounded-xl shadow-[0px_20px_40px_rgba(0,71,141,0.04)]">
+                            <p className="text-stitch-on-surface-variant text-[0.6875rem] font-bold uppercase tracking-wider mb-2">Blood Group</p>
+                            <p className="text-lg font-headline font-bold text-stitch-error">{profile?.bloodGroup || "N/A"}</p>
+                        </div>
+                        <div className="bg-stitch-surface-container-lowest p-6 rounded-xl shadow-[0px_20px_40px_rgba(0,71,141,0.04)] flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-stitch-secondary-container flex items-center justify-center">
+                                <span className="material-symbols-outlined text-stitch-on-secondary-container" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                            </div>
+                            <div>
+                                <p className="text-stitch-on-surface-variant text-[0.6875rem] font-bold uppercase tracking-wider">Status</p>
+                                <p className="text-sm font-bold text-stitch-on-secondary-container">{toTitleCase(user?.role) || "Active Patient"}</p>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Left Column: Core Medical & Personal */}
+                    <div className="lg:col-span-8 flex flex-col gap-8">
+                        {/* Basic Information Card */}
+                        <section className="bg-stitch-surface-container-lowest rounded-xl p-8 shadow-[0px_20px_40px_rgba(0,71,141,0.04)]">
+                            <div className="flex items-center justify-between mb-8">
+                                <h3 className="text-xl font-bold font-headline flex items-center gap-3">
+                                    <span className="material-symbols-outlined text-stitch-primary">person</span>
+                                    Basic Information
+                                </h3>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
+                                <div className="border-b border-stitch-surface-container-high pb-4">
+                                    <label className="text-[0.6875rem] font-bold text-stitch-on-surface-variant uppercase tracking-wider block mb-1">Full Name</label>
+                                    <p className="text-sm font-medium text-stitch-on-background">{user?.fullName || "Not provided"}</p>
+                                </div>
+                                <div className="border-b border-stitch-surface-container-high pb-4">
+                                    <label className="text-[0.6875rem] font-bold text-stitch-on-surface-variant uppercase tracking-wider block mb-1">Email</label>
+                                    <p className="text-sm font-medium text-stitch-on-background">{user?.email || profile?.email || "Not provided"}</p>
+                                </div>
+                                <div className="border-b border-stitch-surface-container-high pb-4">
+                                    <label className="text-[0.6875rem] font-bold text-stitch-on-surface-variant uppercase tracking-wider block mb-1">Phone</label>
+                                    <p className="text-sm font-medium text-stitch-on-background">{user?.contact || profile?.contact || "Not provided"}</p>
+                                </div>
+                                <div className="border-b border-stitch-surface-container-high pb-4">
+                                    <label className="text-[0.6875rem] font-bold text-stitch-on-surface-variant uppercase tracking-wider block mb-1">Date of Birth</label>
+                                    <p className="text-sm font-medium text-stitch-on-background">{formatDate(profile?.dob) || "Not provided"}</p>
+                                </div>
+                                <div className="border-b border-stitch-surface-container-high pb-4 md:col-span-2">
+                                    <label className="text-[0.6875rem] font-bold text-stitch-on-surface-variant uppercase tracking-wider block mb-1">Primary Address</label>
+                                    <p className="text-sm font-medium text-stitch-on-background">{profile?.address || "Not provided"}</p>
+                                </div>
+                                <div className="border-b border-stitch-surface-container-high pb-4 md:col-span-2">
+                                    <label className="text-[0.6875rem] font-bold text-stitch-on-surface-variant uppercase tracking-wider block mb-1">Emergency Contact</label>
+                                    <p className="text-sm font-medium text-stitch-on-background">{profile?.emergencyContact || "Not provided"}</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Medical Context Card */}
+                        <section className="bg-stitch-surface-container-lowest rounded-xl p-8 shadow-[0px_20px_40px_rgba(0,71,141,0.04)]">
+                            <h3 className="text-xl font-bold font-headline mb-8 flex items-center gap-3">
+                                <span className="material-symbols-outlined text-stitch-primary">medical_services</span>
+                                Clinical Overview
+                            </h3>
+                            <div className="space-y-8">
+                                <div>
+                                    <label className="text-[0.6875rem] font-bold text-stitch-on-surface-variant uppercase tracking-wider block mb-3">Allergies</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {toList(profile?.allergies).length > 0 ? (
+                                            toList(profile?.allergies).map((allergy, index) => (
+                                                <span key={index} className="px-3 py-1 bg-stitch-error-container text-stitch-on-error-container rounded-full text-[0.6875rem] font-bold">
+                                                    {allergy}
+                                                </span>
+                                            ))
+                                        ) : (
+                                            <span className="text-sm text-stitch-on-surface-variant italic">No allergies recorded</span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="bg-stitch-surface-container-low p-5 rounded-lg">
+                                        <label className="text-[0.6875rem] font-bold text-stitch-on-surface-variant uppercase tracking-wider block mb-2">Current Medications</label>
+                                        {toList(profile?.medications).length > 0 ? (
+                                            toList(profile?.medications).map((med, index) => (
+                                                <div key={index} className="mb-2">
+                                                    <p className="text-sm font-semibold text-stitch-primary">{med}</p>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <span className="text-sm text-stitch-on-surface-variant italic">No medications recorded</span>
+                                        )}
+                                    </div>
+                                    <div className="bg-stitch-surface-container-low p-5 rounded-lg">
+                                        <label className="text-[0.6875rem] font-bold text-stitch-on-surface-variant uppercase tracking-wider block mb-2">Medical History</label>
+                                        {toList(profile?.medicalHistory).length > 0 ? (
+                                            toList(profile?.medicalHistory).map((history, index) => (
+                                                <div key={index} className="mb-2">
+                                                    <p className="text-sm font-semibold text-stitch-on-background">{history}</p>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <span className="text-sm text-stitch-on-surface-variant italic">No history recorded</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Clinical Records (FHIR) placeholder */}
+                        <section className="bg-stitch-surface-container-lowest rounded-xl overflow-hidden shadow-[0px_20px_40px_rgba(0,71,141,0.04)]">
+                            <div className="px-8 py-6 bg-stitch-surface-container-high flex justify-between items-center">
+                                <h3 className="text-sm font-bold font-headline uppercase tracking-widest text-stitch-on-surface">Clinical Records</h3>
+                                <span className="px-2 py-0.5 bg-stitch-primary-fixed text-stitch-on-primary-fixed-variant rounded text-[0.6rem] font-bold">SECURE</span>
+                            </div>
+                            <div className="p-8 space-y-6">
+                                <div className="pt-4">
+                                    <h4 className="text-[0.6875rem] font-bold text-stitch-on-surface-variant uppercase tracking-wider mb-4">My Documents</h4>
+                                    <div className="bg-stitch-surface-container-low p-10 rounded-xl text-center">
+                                        <span className="material-symbols-outlined text-4xl text-stitch-outline-variant mb-2 block">folder_open</span>
+                                        <p className="text-sm text-stitch-on-surface-variant">No documents found. Upload your medical reports to manage them here.</p>
+                                        <button className="mt-4 text-stitch-primary text-xs font-bold hover:underline">Upload Document</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    {/* Right Column: Actions & Utilities */}
+                    <div className="lg:col-span-4 flex flex-col gap-8">
+                        {/* Snapshot Card */}
+                        <section className="bg-stitch-surface-container-lowest p-8 rounded-xl shadow-[0px_20px_40px_rgba(0,71,141,0.04)] border-t-4 border-stitch-primary">
+                            <h3 className="text-lg font-bold font-headline mb-6">Contact Snapshot</h3>
+                            <div className="space-y-6">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-10 h-10 rounded-full bg-stitch-surface-container-high flex items-center justify-center shrink-0">
+                                        <span className="material-symbols-outlined text-stitch-primary text-xl">mail</span>
+                                    </div>
+                                    <div>
+                                        <p className="text-[0.6875rem] font-bold text-stitch-on-surface-variant uppercase tracking-wider">Email</p>
+                                        <p className="text-sm font-medium">{user?.email || profile?.email || "Not provided"}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-4">
+                                    <div className="w-10 h-10 rounded-full bg-stitch-surface-container-high flex items-center justify-center shrink-0">
+                                        <span className="material-symbols-outlined text-stitch-primary text-xl">call</span>
+                                    </div>
+                                    <div>
+                                        <p className="text-[0.6875rem] font-bold text-stitch-on-surface-variant uppercase tracking-wider">Phone</p>
+                                        <p className="text-sm font-medium">{user?.contact || profile?.contact || "Not provided"}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-4">
+                                    <div className="w-10 h-10 rounded-full bg-stitch-surface-container-high flex items-center justify-center shrink-0">
+                                        <span className="material-symbols-outlined text-stitch-primary text-xl">location_on</span>
+                                    </div>
+                                    <div>
+                                        <p className="text-[0.6875rem] font-bold text-stitch-on-surface-variant uppercase tracking-wider">Address</p>
+                                        <p className="text-sm font-medium">{profile?.address || "Not provided"}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Utilities */}
+                        <section className="bg-stitch-surface-container-lowest p-8 rounded-xl shadow-[0px_20px_40px_rgba(0,71,141,0.04)]">
+                            <h3 className="text-lg font-bold font-headline mb-6">Account Utilities</h3>
+                            <div className="space-y-2">
+                                <button className="w-full flex items-center justify-between p-4 rounded-lg hover:bg-stitch-surface-container-low transition-colors group">
+                                    <div className="flex items-center gap-4">
+                                        <span className="material-symbols-outlined text-stitch-on-surface-variant group-hover:text-stitch-primary transition-colors">lock_reset</span>
+                                        <span className="text-sm font-medium">Change Password</span>
+                                    </div>
+                                    <span className="material-symbols-outlined text-stitch-outline-variant">chevron_right</span>
+                                </button>
+                                <button className="w-full flex items-center justify-between p-4 rounded-lg hover:bg-stitch-surface-container-low transition-colors group">
+                                    <div className="flex items-center gap-4">
+                                        <span className="material-symbols-outlined text-stitch-on-surface-variant group-hover:text-stitch-primary transition-colors">contact_support</span>
+                                        <span className="text-sm font-medium">Help & Support</span>
+                                    </div>
+                                    <span className="material-symbols-outlined text-stitch-outline-variant">chevron_right</span>
+                                </button>
+                            </div>
+                        </section>
+
+                        {/* Export Records Footer */}
+                        <div className="p-6 bg-stitch-surface-container-low rounded-xl">
+                            <h4 className="text-sm font-bold mb-2">Data Portability</h4>
+                            <p className="text-xs text-stitch-on-surface-variant mb-4">Export your full medical record securely for third-party software.</p>
+                            <button className="text-stitch-primary text-xs font-bold flex items-center gap-1 hover:translate-x-1 transition-transform">
+                                Learn about the formats
+                                <span className="material-symbols-outlined text-sm">open_in_new</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

@@ -45,7 +45,7 @@ export function NavBar({ items, logoText = "Clinicall", className }: NavBarProps
         <>
             <header
                 className={cn(
-                    "fixed top-0 left-0 z-50 w-full border-b border-border/40 bg-background/90 backdrop-blur-lg",
+                    "fixed top-0 left-0 z-50 w-full border-b border-transparent backdrop-blur-md bg-gradient-to-b from-black/20 to-transparent",
                     className,
                 )}
             >

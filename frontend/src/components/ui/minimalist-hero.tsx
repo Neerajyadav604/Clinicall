@@ -1,118 +1,328 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { cn } from '../../lib/utils';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-export interface MinimalistHeroProps {
-    mainText: string;
-    readMoreLink: string;
-    imageSrc: string;
-    imageAlt: string;
-    overlayText: string;
-    ctaText?: string;
-    ctaLink?: string;
-    locationText: string;
-    className?: string;
+/* ─────────────────────────────────────────────────────────────────
+   CHAT CONVERSATIONS
+───────────────────────────────────────────────────────────────── */
+const CONVOS = [
+  [
+    { role: 'agent' as const, text: "Hi! I'd like to book an appointment with a cardiologist." },
+    { role: 'user' as const,  text: 'Sure! When works best for you?' },
+    { role: 'agent' as const, text: 'Tomorrow at 10 AM, or Friday at 3 PM?' },
+    { role: 'user' as const,  text: 'Friday at 3 PM please.' },
+    { role: 'agent' as const, text: 'Booked! Dr. Kavya Sharma — Friday, 3:00 PM ✓' },
+  ],
+  [
+    { role: 'agent' as const, text: 'Your appointment with Dr. Arjit is confirmed.' },
+    { role: 'user' as const,  text: 'Can I view my prescription?' },
+    { role: 'agent' as const, text: 'Opening your clinical records now...' },
+    { role: 'user' as const,  text: 'Thank you so much!' },
+    { role: 'agent' as const, text: 'Prescription sent to your email. Stay well 💊' },
+  ],
+  [
+    { role: 'agent' as const, text: 'Dr. Rahul has approved your consultation.' },
+    { role: 'user' as const,  text: 'How do I join the session?' },
+    { role: 'agent' as const, text: "Click 'Live Consultation' after payment." },
+    { role: 'user' as const,  text: 'Payment done!' },
+    { role: 'agent' as const, text: 'Session is live — connecting you now 🟢' },
+  ],
+] as const;
+
+/* ─────────────────────────────────────────────────────────────────
+   DEFAULT SCENES — replace src with real Pexels .mp4 URLs
+───────────────────────────────────────────────────────────────── */
+const DEFAULT_SCENES = [
+  { label: 'Patient Booking',     src: '' },
+  { label: 'Doctor Consultation', src: '' },
+  { label: 'Clinical Records',    src: '' },
+];
+
+/* ─────────────────────────────────────────────────────────────────
+   TYPE DEFINITIONS
+───────────────────────────────────────────────────────────────── */
+interface Message {
+  role: 'agent' | 'user';
+  text: string;
 }
 
-export const MinimalistHero = ({
-    mainText,
-    readMoreLink,
-    imageSrc,
-    imageAlt,
-    overlayText,
-    ctaText = 'Book Appointment',
-    ctaLink = '/appointment',
-    locationText,
-    className,
-}: MinimalistHeroProps) => {
-    return (
-        <div
-            className={cn(
-                'relative flex min-h-screen w-full flex-col items-center justify-between bg-background p-8 font-sans md:p-12',
-                className
-            )}
-        >
-            {/* Watermark Text Overlay - Positioned relative to viewport */}
-            <motion.div
-                initial={{ opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.6 }}
-                className="pointer-events-none fixed left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
-            >
-                <h1 className="whitespace-nowrap text-center text-[clamp(30px,4vw,60px)] font-black leading-none tracking-tight text-black">
-                    {overlayText}
-                </h1>
-            </motion.div>
+interface Scene {
+  label: string;
+  src: string;
+}
 
-            {/* Main Content Area */}
-            <div className="relative grid w-full max-w-7xl flex-grow grid-cols-1 items-end md:grid-cols-3 min-h-0">
-                {/* Left Text Content - Buttons Only */}
-                <motion.div
-                    initial={{ opacity: 0, y: 24 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 1 }}
-                    className="z-20 order-2 text-center md:order-1 md:text-left mb-8 md:mb-16"
-                >
-                    <div className="flex flex-wrap items-center justify-center gap-3 md:justify-start">
-                        <Link
-                            to={readMoreLink}
-                            className="group inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-foreground/60 transition-all duration-300 hover:text-foreground hover:gap-3"
-                        >
-                            Read More
-                            <span className="inline-block h-px w-6 bg-current transition-all duration-300 group-hover:w-8" />
-                        </Link>
+/* ─────────────────────────────────────────────────────────────────
+   CHAT WIDGET
+───────────────────────────────────────────────────────────────── */
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-                        <Link
-                            to={ctaLink}
-                            className="inline-flex items-center justify-center rounded-full bg-blue-600 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-white shadow-md transition hover:bg-blue-700"
-                        >
-                            {ctaText}
-                        </Link>
-                    </div>
-                </motion.div>
+function ChatWidget() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [typing, setTyping]     = useState(false);
+  const convRef                 = useRef(0);
 
-                {/* Center Image with Circle */}
-                <div className="relative order-1 flex w-full justify-center items-end h-full min-h-[500px] md:order-2">
-                    <motion.div
-                        initial={{ scale: 0.75, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
-                        className="absolute z-5 h-[360px] w-[360px] rounded-full bg-yellow-400/90 shadow-[0_0_80px_20px_rgba(234,179,8,0.18)] md:h-[460px] md:w-[460px] lg:h-[560px] lg:w-[560px] bottom-12 md:bottom-0"
-                    />
-                    <motion.img
-                        src={imageSrc}
-                        alt={imageAlt}
-                        className="relative z-20 w-72 md:w-80 lg:w-96 h-auto self-end object-cover object-top"
-                        initial={{ opacity: 0, y: 60 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
-                    />
-                    {/* Main Text - Behind Image, Overlapping Lower Body */}
-                    <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 1 }}
-                        className="absolute z-10 bottom-0 left-1/2 -translate-x-1/2 whitespace-nowrap text-[clamp(28px,3.5vw,52px)] font-black text-foreground"
-                    >
-                        {mainText}
-                    </motion.p>
-                </div>
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      while (!cancelled) {
+        const conv = CONVOS[convRef.current % CONVOS.length];
+        setMessages([]);
+        for (const msg of conv) {
+          if (cancelled) return;
+          if (msg.role === 'agent') { setTyping(true); await wait(980); setTyping(false); }
+          else await wait(520);
+          setMessages((prev) => {
+            const next = [...prev, msg];
+            return next.length > 4 ? next.slice(next.length - 4) : next;
+          });
+          await wait(680);
+        }
+        await wait(2600);
+        convRef.current++;
+      }
+    }
+    const t = setTimeout(run, 900);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, []);
 
-                <div className="order-3 hidden md:block" />
-            </div>
-
-            {/* Footer Elements (No SocialLinks) */}
-            <footer className="z-30 flex w-full max-w-7xl items-center justify-end">
-                <motion.div
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: 1.5 }}
-                    className="text-xs font-medium uppercase tracking-[0.2em] text-foreground/50"
-                >
-                    {locationText}
-                </motion.div>
-            </footer>
+  return (
+    <div style={{
+      position: 'absolute',
+      bottom: 44,
+      left: 56,
+      zIndex: 30,
+      width: 360,
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 13, padding: '0 2px' }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: '50%',
+          background: 'linear-gradient(135deg,#1a56a4,#0a8a6a)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0,
+        }}>AM</div>
+        <div>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.9)', fontWeight: 600, margin: 0 }}>
+            AppointMed Assistant
+          </p>
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', margin: '2px 0 0' }}>
+            Online · Instant replies
+          </p>
         </div>
+        <span style={{
+          width: 9, height: 9, borderRadius: '50%', background: '#22c55e',
+          marginLeft: 'auto', flexShrink: 0,
+          boxShadow: '0 0 0 3px rgba(34,197,94,0.22)',
+          animation: 'chatPulse 2s infinite',
+        }} />
+      </div>
+
+      {/* Messages */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+        <AnimatePresence initial={false}>
+          {messages.map((msg, i) => (
+            <motion.div
+              key={`${convRef.current}-${i}`}
+              initial={{ opacity: 0, y: 10, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.94 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                maxWidth: '88%',
+                padding: '12px 16px',
+                fontSize: 14,
+                lineHeight: 1.55,
+                borderRadius: msg.role === 'agent' ? '16px 16px 16px 4px' : '16px 16px 4px 16px',
+                background: msg.role === 'agent' ? 'rgba(255,255,255,0.13)' : '#fff',
+                color: msg.role === 'agent' ? 'rgba(255,255,255,0.92)' : '#0c1929',
+                border: msg.role === 'agent' ? '0.5px solid rgba(255,255,255,0.18)' : 'none',
+                backdropFilter: msg.role === 'agent' ? 'blur(12px)' : 'none',
+                alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                marginLeft: msg.role === 'user' ? 'auto' : 0,
+              }}
+            >
+              {msg.text}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+
+        {/* Typing indicator */}
+        {typing && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '12px 16px',
+              background: 'rgba(255,255,255,0.11)',
+              borderRadius: '16px 16px 16px 4px',
+              border: '0.5px solid rgba(255,255,255,0.15)',
+              width: 'fit-content',
+              backdropFilter: 'blur(12px)',
+            }}
+          >
+            {[0, 0.18, 0.36].map((delay, i) => (
+              <span key={i} style={{
+                width: 7, height: 7, borderRadius: '50%',
+                background: 'rgba(255,255,255,0.55)',
+                display: 'inline-block',
+                animation: `typingBounce 1.2s ${delay}s ease-in-out infinite`,
+              }} />
+            ))}
+          </motion.div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   VIDEO BACKGROUND
+───────────────────────────────────────────────────────────────── */
+function VideoBg({ scenes, currentIdx }: { scenes: Scene[]; currentIdx: number }) {
+  const FALLBACKS = [
+    'linear-gradient(135deg,#0c1929 0%,#0f2d4a 50%,#0a3d62 100%)',
+    'linear-gradient(135deg,#0d2137 0%,#0a3d2e 50%,#0b4d3a 100%)',
+    'linear-gradient(135deg,#1a1030 0%,#0f1e4a 50%,#0c2960 100%)',
+  ];
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden' }}>
+      {scenes.map((scene: Scene, i: number) => (
+        <div key={i} style={{
+          position: 'absolute', inset: 0,
+          opacity: i === currentIdx ? 1 : 0,
+          transition: 'opacity 1.4s ease',
+          background: FALLBACKS[i % FALLBACKS.length],
+        }}>
+          {scene.src && (
+            <video autoPlay muted loop playsInline preload="auto"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}>
+              <source src={scene.src} type="video/mp4" />
+            </video>
+          )}
+        </div>
+      ))}
+
+      {/* Dark overlay */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 1,
+        background: 'linear-gradient(to bottom,rgba(8,16,32,0.70) 0%,rgba(8,16,32,0.48) 50%,rgba(8,16,32,0.82) 100%)',
+      }} />
+
+      {/* Subtle grid */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
+        backgroundImage: `
+          linear-gradient(rgba(255,255,255,0.022) 1px,transparent 1px),
+          linear-gradient(90deg,rgba(255,255,255,0.022) 1px,transparent 1px)
+        `,
+        backgroundSize: '64px 64px',
+      }} />
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   MAIN COMPONENT
+───────────────────────────────────────────────────────────────── */
+export function MinimalistHero({
+  className   = '',
+  videoScenes = DEFAULT_SCENES,
+}) {
+  const [sceneIdx, setSceneIdx] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(
+      () => setSceneIdx((p) => (p + 1) % videoScenes.length),
+      5000
     );
-};
+    return () => clearInterval(id);
+  }, [videoScenes.length]);
+
+  return (
+    <>
+      <style>{`
+        @keyframes chatPulse {
+          0%,100%{opacity:1;transform:scale(1)}
+          50%{opacity:0.4;transform:scale(0.8)}
+        }
+        @keyframes typingBounce {
+          0%,60%,100%{transform:translateY(0);opacity:0.4}
+          30%{transform:translateY(-6px);opacity:1}
+        }
+        .mh-scene-dot{
+          border:none;cursor:pointer;height:6px;border-radius:3px;
+          background:rgba(255,255,255,0.28);transition:all 0.4s ease;padding:0;
+        }
+        .mh-scene-dot.active{background:#fff;}
+        @media(max-width:480px){
+          .mh-chat-wrap{left:16px!important;width:calc(100vw - 32px)!important;bottom:24px!important;}
+        }
+      `}</style>
+
+      <div
+        className={className}
+        style={{
+          position: 'relative',
+          minHeight: '100vh',
+          width: '100%',
+          overflow: 'hidden',
+          background: '#0c1929',
+        }}
+      >
+        {/* ── VIDEO BACKGROUND ── */}
+        <VideoBg scenes={videoScenes} currentIdx={sceneIdx} />
+
+        {/* ── SCENE DOT INDICATORS — bottom center ── */}
+        <div style={{
+          position: 'absolute',
+          bottom: 52,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 20,
+          display: 'flex',
+          gap: 8,
+        }}>
+          {videoScenes.map((_, i) => (
+            <button
+              key={i}
+              className={`mh-scene-dot${i === sceneIdx ? ' active' : ''}`}
+              style={{ width: i === sceneIdx ? 28 : 6 }}
+              onClick={() => setSceneIdx(i)}
+              aria-label={`Scene ${i + 1}`}
+            />
+          ))}
+        </div>
+
+        {/* ── SCENE LABEL — bottom center above dots ── */}
+        <div style={{
+          position: 'absolute',
+          bottom: 72,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 20,
+          fontSize: 10,
+          fontWeight: 600,
+          letterSpacing: '0.1em',
+          color: 'rgba(255,255,255,0.32)',
+          textTransform: 'uppercase',
+          whiteSpace: 'nowrap',
+        }}>
+          {videoScenes[sceneIdx]?.label}
+        </div>
+
+        {/* ── CHAT WIDGET ── */}
+        <div className="mh-chat-wrap" style={{
+          position: 'absolute',
+          bottom: 44,
+          left: 56,
+          zIndex: 30,
+        }}>
+          <ChatWidget />
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default MinimalistHero;

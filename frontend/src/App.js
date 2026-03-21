@@ -41,7 +41,10 @@ function App() {
   const { token, user } = useSelector((state) => state.auth);
 
   // Hide the public navbar and chat widget on admin routes — they have their own layout
-  const isAdminRoute = location.pathname.startsWith('/admin');
+  const layoutOwnedPrefixes = [];
+  const usesRoleLayout = layoutOwnedPrefixes.some((prefix) =>
+    location.pathname.startsWith(prefix)
+  );
 
   useEffect(() => {
     initAuthSession();
@@ -76,9 +79,9 @@ function App() {
         theme="light"
       />
       <FhirErrorToast />
-      {!isAdminRoute && <GlobalNavbar />}
-      {!isAdminRoute && <ChatWidget />}
-      <div className={!isAdminRoute ? "pt-24" : ""}>
+      {!usesRoleLayout && <GlobalNavbar />}
+      {!usesRoleLayout && <ChatWidget />}
+      <div className={!usesRoleLayout ? "pt-24" : ""}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/aboutus" element={<AboutUs />} />

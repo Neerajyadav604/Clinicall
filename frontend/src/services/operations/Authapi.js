@@ -241,12 +241,8 @@ export function doctorRegistration(formData, token, navigate) {
 
       const response = await axiosInstance.post(
         DOCTOR_REGISTRATION_API,
-        doctorFormData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
+        doctorFormData
+        // Do NOT set Content-Type header - let axios handle it automatically with FormData
       );
 
       console.log("DOCTOR REGISTRATION API RESPONSE:", response);

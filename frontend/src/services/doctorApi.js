@@ -230,11 +230,8 @@ export const uploadDoctorProfileImage = async (imageFile) => {
     const formData = new FormData();
     formData.append("image", imageFile);
 
-    const response = await axiosInstance.post(`/profile/update-image`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    // Do NOT set Content-Type header - let axios handle it automatically with FormData
+    const response = await axiosInstance.post(`/profile/update-image`, formData);
     return response.data;
   } catch (error) {
     console.error("Error uploading profile image:", error);

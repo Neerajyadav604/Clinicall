@@ -1,11 +1,54 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
 
 const { authenticateUser, isDoctor } = require("../middleware/authMiddleware");
 const Doctor = require("../models/Doctor");
 const Appointment = require("../models/Appointment");
 
 const { approveAppointment, rejectAppointment } = require("../Controllers/ManageAppoinment");
+
+// ============================================
+// MULTER CONFIGURATION FOR PROFILE IMAGE UPLOADS
+// ============================================
+const storage = multer.memoryStorage();
+const fileFilter = (req, file, cb) => {
+  // Allow only image files
+  const allowedMimeTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only image files (JPG, PNG, GIF, WebP) are allowed"));
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+});
+
+// ✅ Multer error handler
+const multerErrorHandler = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({
+        success: false,
+        message: "Image size should be less than 5MB",
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      message: `Upload error: ${err.message}`,
+    });
+  } else if (err) {
+    return res.status(400).json({
+      success: false,
+      message: err.message || "File upload failed",
+    });
+  }
+  next();
+};
 
 // ============================================
 // DOCTOR PROFILE ENDPOINTS
@@ -434,21 +477,21 @@ router.put("/profile/update", authenticateUser, isDoctor, async (req, res) => {
  * POST /api/v1/profile/update-image
  * Upload doctor's profile image using Cloudinary
  */
-router.post("/profile/update-image", authenticateUser, isDoctor, async (req, res) => {
+router.post("/profile/update-image", authenticateUser, isDoctor, upload.single("image"), multerErrorHandler, async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Check if file exists
-    if (!req.files || !req.files.image) {
+    // Check if file exists (multer stores in req.file, not req.files)
+    if (!req.file) {
       return res.status(400).json({
         success: false,
         message: "No image file provided",
       });
     }
 
-    const imageFile = req.files.image;
+    const imageFile = req.file;
 
-    // Validate file type
+    // Validate file type (multer already does this, but double-check)
     const allowedMimeTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
     if (!allowedMimeTypes.includes(imageFile.mimetype)) {
       return res.status(400).json({
@@ -457,7 +500,7 @@ router.post("/profile/update-image", authenticateUser, isDoctor, async (req, res
       });
     }
 
-    // Validate file size (5MB max)
+    // Validate file size (multer already limits to 5MB, but double-check)
     if (imageFile.size > 5 * 1024 * 1024) {
       return res.status(400).json({
         success: false,
@@ -475,7 +518,7 @@ router.post("/profile/update-image", authenticateUser, isDoctor, async (req, res
       });
     }
 
-    // Upload to Cloudinary (FIXED: use Cloudinary instead of base64)
+    // Upload to Cloudinary (convert buffer to stream)
     const { uploadImageToCloudinary } = require('../utils/ImageUploader');
     const uploadedImage = await uploadImageToCloudinary(
       imageFile,

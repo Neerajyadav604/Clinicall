@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import AdminLayout from "./AdminLayout";
+import AdminLayout from "./AdminLayout.jsx";
 import TableComponent from "../../components/admin/TableComponent";
 import { toast } from "react-toastify";
 import { getUsers } from "../../services/adminApi";

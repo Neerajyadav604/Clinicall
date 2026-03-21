@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -18,6 +18,31 @@ const ProfileDropDown = () => {
   
   // ✅ Get user from Redux store
   const { user } = useSelector((state) => state.profile);
+  const resolvedUser = useMemo(() => {
+    const baseUser = user || {};
+
+    try {
+      const doctorProfileRaw = localStorage.getItem("doctorProfile");
+      if (doctorProfileRaw) {
+        const doctorProfile = JSON.parse(doctorProfileRaw);
+        return { ...baseUser, ...doctorProfile };
+      }
+    } catch (error) {
+      console.error("Failed to parse doctorProfile from localStorage:", error);
+    }
+
+    try {
+      const storedUserRaw = localStorage.getItem("user");
+      if (storedUserRaw) {
+        const storedUser = JSON.parse(storedUserRaw);
+        return { ...storedUser, ...baseUser };
+      }
+    } catch (error) {
+      console.error("Failed to parse user from localStorage:", error);
+    }
+
+    return baseUser;
+  }, [user]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -39,7 +64,7 @@ const ProfileDropDown = () => {
 
   // ✅ Get profile path based on user role
   const getProfilePath = () => {
-    const userRole = user?.role?.toLowerCase();
+    const userRole = resolvedUser?.role?.toLowerCase();
 
     if (userRole === "admin") {
       return "/admin";
@@ -79,15 +104,15 @@ const ProfileDropDown = () => {
         className="flex items-center justify-center w-10 h-10 rounded-full transition focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         {/* ✅ Profile Image or Initials */}
-        {user?.image ? (
+        {resolvedUser?.image ? (
           <img
-            src={user.image}
-            alt={user.fullName}
+            src={resolvedUser.image}
+            alt={resolvedUser.fullName}
             className="w-10 h-10 rounded-full object-cover"
           />
         ) : (
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-xs">
-            {getInitials(user?.fullName)}
+            {getInitials(resolvedUser?.fullName)}
           </div>
         )}
       </button>
@@ -98,23 +123,23 @@ const ProfileDropDown = () => {
           {/* ✅ User Info Header (visible on mobile) */}
           <div className="sm:hidden px-4 py-3 border-b border-gray-200">
             <div className="flex items-center gap-3">
-              {user?.image ? (
+              {resolvedUser?.image ? (
                 <img
-                  src={user.image}
-                  alt={user.fullName}
+                  src={resolvedUser.image}
+                  alt={resolvedUser.fullName}
                   className="w-10 h-10 rounded-full object-cover"
                 />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                  {getInitials(user?.fullName)}
+                  {getInitials(resolvedUser?.fullName)}
                 </div>
               )}
               <div>
                 <div className="text-sm font-medium text-gray-700">
-                  {user?.fullName || "User"}
+                  {resolvedUser?.fullName || "User"}
                 </div>
                 <div className="text-xs text-gray-500">
-                  {truncateEmail(user?.email)}
+                  {truncateEmail(resolvedUser?.email)}
                 </div>
               </div>
             </div>
