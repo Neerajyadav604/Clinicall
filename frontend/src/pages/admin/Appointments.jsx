@@ -13,7 +13,8 @@ const Appointments = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState("all");
-  const [_actionLoading, _setActionLoading] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const [actionLoading, setActionLoading] = useState(null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
