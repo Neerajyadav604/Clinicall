@@ -59,6 +59,7 @@ const internalRoutes    = require("./routes/AI_internal");
 const NotificationRoutes = require("./routes/Notification");
 const OAuth             = require("./routes/oauth");
 const consultationRoutes = require("./routes/consultation.routes");
+const { router: videoCallRouter, registerVideoCallSocket } = require("./routes/videoCall.routes");
 
 // ============================================
 // APP & SERVER INIT
@@ -100,13 +101,13 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       // ✅ Use nonce for inline scripts instead of unsafe-inline
-      scriptSrc:  ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`],
+      scriptSrc:  ["'self'", "https://8x8.vc", (req, res) => `'nonce-${res.locals.nonce}'`],
       // ✅ Use nonce for inline styles instead of unsafe-inline
       styleSrc:   ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`],
       imgSrc:     ["'self'", "data:", "https:", "https://res.cloudinary.com"],
       fontSrc:    ["'self'", "data:"],
-      connectSrc: ["'self'", "https:"],
-      frameSrc:   ["'self'"],
+      connectSrc: ["'self'", "https:", "wss://8x8.vc"],
+      frameSrc:   ["'self'", "https://8x8.vc"],
     },
   },
   crossOriginResourcePolicy: { policy: "same-site" },
@@ -283,6 +284,7 @@ app.use("/api/v1",               Payment);
 app.use("/api/v1",               Registration);
 app.use("/api/v1",               NotificationRoutes);
 app.use("/api/v1",               consultationRoutes);
+app.use("/api/v1",               videoCallRouter);
 app.use("/api/v1",               Hospital);
 app.use("/api/v1/admin",         Admin);
 app.use("/api/v1/admin/analytics", require('./routes/AdminAnalytics'));
@@ -464,6 +466,8 @@ const maskSensitiveData = (str) => {
 io.on("connection", (socket) => {
   // ✅ SECURITY: Don't log full socket.id, just indicate connection
   console.log("🔌 Client connected");
+
+  registerVideoCallSocket(io, socket);
 
   // --- Authenticate for specific appointment ---
   socket.on("authenticate_appointment", async ({ appointmentId }) => {
