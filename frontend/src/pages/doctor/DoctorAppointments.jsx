@@ -145,6 +145,38 @@ const DoctorAppointments = () => {
         .da-row:hover { background: #f8fafc; }
         .da-row.locked { opacity: 0.55; }
 
+        @media (max-width: 768px) {
+          .da-table-header { display: none; }
+          .da-row {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 16px;
+            border-bottom: 1px solid #f1f5f9;
+            border-radius: 12px;
+            margin: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            background: #fff;
+          }
+          .da-row-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            width: 100%;
+          }
+          .da-btn {
+            flex: 1;
+            min-width: 80px;
+            justify-content: center;
+            padding: 10px 8px;
+            font-size: 13px;
+          }
+          .da-fab {
+            bottom: 20px;
+            right: 16px;
+          }
+        }
+
         .da-avatar {
           width: 36px; height: 36px; border-radius: 10px;
           background: #dbeafe; display: flex; align-items: center; justify-content: center;
@@ -389,7 +421,7 @@ const DoctorAppointments = () => {
                 </div>
 
                 {/* Actions */}
-                <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                <div className="da-row-actions" style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                   {status === "PENDING" ? (
                     <>
                       <button

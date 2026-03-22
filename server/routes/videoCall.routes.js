@@ -101,26 +101,23 @@ const registerVideoCallSocket = (io, socket) => {
   // ── call:video:start — doctor or patient initiates a call ────────────────
   socket.on("call:video:start", async ({ appointmentId }) => {
     try {
-      const appointment = await Appointment.findById(appointmentId);
+      const appointment = await Appointment.findById(appointmentId).populate('doctorId', 'fullName image');
       if (!appointment) return socket.emit("error", "Appointment not found");
 
       const userId = socket.user._id.toString();
       const isParticipant =
-        appointment.userId?.toString()   === userId ||
-        appointment.doctorId?.toString() === userId;
+        appointment.userId?.toString() === userId ||
+        appointment.doctorId?._id?.toString() === userId;
 
       if (!isParticipant) return socket.emit("error", "Access denied");
 
-      // Track the call
       activeVideoCalls.set(appointmentId, {
         startedBy:    userId,
         startedAt:    Date.now(),
         participants: new Set([userId]),
       });
 
-      // Notify the OTHER participant in the same chat room
-      const chatRoom = `chat_${appointmentId}`;
-      socket.to(chatRoom).emit("call:video:incoming", {
+      const callPayload = {
         appointmentId,
         calledBy: {
           id:     socket.user._id,
@@ -129,7 +126,21 @@ const registerVideoCallSocket = (io, socket) => {
           avatar: socket.user.image || null,
         },
         startedAt: new Date().toISOString(),
-      });
+      };
+
+      // Scenario 1: notify inside the chat room (both have chat open)
+      socket.to(`chat_${appointmentId}`).emit("call:video:incoming", callPayload);
+
+      // Scenario 2: notify doctor's personal room (doctor is anywhere else in the app)
+      // Doctor's personal room is their userId string — already used by your consent system
+      const doctorId = appointment.doctorId?._id?.toString() || appointment.doctorId?.toString();
+      const patientId = appointment.userId?.toString();
+
+      // Notify whichever participant is NOT the caller via their personal room
+      const otherPersonId = userId === patientId ? doctorId : patientId;
+      if (otherPersonId) {
+        socket.to(otherPersonId).emit("call:video:incoming", callPayload);
+      }
 
       socket.emit("call:video:started", { appointmentId });
       console.log(`[VideoCall] Started by ${socket.user.fullName} for appointment ${appointmentId}`);

@@ -29,10 +29,13 @@ import HospitalAdminDashboard from './pages/HospitalAdminDashboard';
 import MedicalRecords from './pages/MedicalRecords';
 import FhirConnect from './pages/FhirConnect';
 
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
 import { initAuthSession } from './services/authSession';
- import ConsultationPage from "./pages/ConsultationPage";
-
+import ConsultationPage from "./pages/ConsultationPage";
+import socket from "./utils/socket";
+import IncomingCallBanner from "./components/consultation/IncomingCallBanner";
+import { requestNotificationPermission, showIncomingCallNotification, dismissCallNotification } from "./utils/callNotification";
 
 import { connectSocket, disconnectSocket } from './utils/socketManager';
 
@@ -60,6 +63,7 @@ function App() {
       // User is logged in — connect socket
       console.log('🔌 [App] User logged in, connecting socket...');
       connectSocket(token);
+      requestNotificationPermission();
     } else {
       // User is logged out — disconnect socket
       console.log('🔌 [App] User logged out, disconnecting socket...');
@@ -67,8 +71,53 @@ function App() {
     }
   }, [token, user]);
 
+  // ── Global incoming video call listener ──────────────────────────────────
+  const [globalIncomingCall, setGlobalIncomingCall] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const onIncoming = (data) => {
+      // Only show global banner if user is NOT already on the chat page for this appointment
+      const isOnChatPage = window.location.pathname.includes(data.appointmentId);
+      if (!isOnChatPage) {
+        setGlobalIncomingCall(data);
+        showIncomingCallNotification(
+          data.calledBy?.name,
+          data.calledBy?.role,
+          handleGlobalAccept
+        );
+      }
+    };
+
+    socket.on("call:video:incoming", onIncoming);
+    return () => socket.off("call:video:incoming", onIncoming);
+  }, []);
+
+  const handleGlobalAccept = () => {
+    dismissCallNotification();
+    if (!globalIncomingCall) return;
+    const { appointmentId } = globalIncomingCall;
+    setGlobalIncomingCall(null);
+    // Navigate to the chat page — the IncomingCallBanner there will handle the rest
+    navigate(`/chat/${appointmentId}`);
+  };
+
+  const handleGlobalDecline = () => {
+    dismissCallNotification();
+    if (globalIncomingCall) {
+      socket.emit("call:video:decline", { appointmentId: globalIncomingCall.appointmentId });
+    }
+    setGlobalIncomingCall(null);
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
   return (
     <div className="App">
+      <IncomingCallBanner
+        incomingCall={globalIncomingCall}
+        onAccept={handleGlobalAccept}
+        onDecline={handleGlobalDecline}
+      />
       <ToastContainer
         position="top-right"
         autoClose={3000}

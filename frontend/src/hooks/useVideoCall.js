@@ -122,7 +122,8 @@ export function useVideoCall(appointmentId) {
   // ── Socket listeners ─────────────────────────────────────────────────────
   useEffect(() => {
     const onIncoming = (data) => {
-      if (callState === "idle") {
+      // Only show in-chat banner if we're idle AND this call is for this appointment
+      if (callState === "idle" && data.appointmentId === appointmentId) {
         setIncomingCall(data);
         setCallState("incoming");
       }

@@ -7,7 +7,51 @@
 //   onDecline     func
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { useEffect, useRef } from "react";
+
 export default function IncomingCallBanner({ incomingCall, onAccept, onDecline }) {
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    if (!incomingCall) return;
+
+    // Create ringtone using Web Audio API — no external file needed
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+
+    const ctx = new AudioContext();
+    let stopped = false;
+
+    const ring = () => {
+      if (stopped) return;
+
+      // Two-tone medical ring: 880hz then 1100hz
+      [880, 1100].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = "sine";
+        gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.18);
+        gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + i * 0.18 + 0.02);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + i * 0.18 + 0.16);
+        osc.start(ctx.currentTime + i * 0.18);
+        osc.stop(ctx.currentTime + i * 0.18 + 0.18);
+      });
+
+      // Repeat every 2.5 seconds
+      audioRef.current = setTimeout(ring, 2500);
+    };
+
+    ring();
+
+    return () => {
+      stopped = true;
+      clearTimeout(audioRef.current);
+      ctx.close();
+    };
+  }, [incomingCall]);
   if (!incomingCall) return null;
 
   const { calledBy } = incomingCall;
