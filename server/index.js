@@ -760,6 +760,14 @@ io.on("connection", (socket) => {
 });
 
 // ============================================
+// GLOBAL ERROR HANDLER
+// ============================================
+app.use((err, req, res, next) => {
+  console.error("[Global Error Handler]", req.method, req.path, err.message, err.stack);
+  res.status(500).json({ success: false, message: err.message });
+});
+
+// ============================================
 // SCHEDULED JOBS (deferred)
 // ============================================
 console.log('ℹ️  [STARTUP] Cron/scheduled jobs deferred (disabled for startup speed)');

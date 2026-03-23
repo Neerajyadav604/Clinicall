@@ -21,6 +21,7 @@ const normalizeScopes = (scopeValue) => {
 };
 
 const authenticateUser = async (req, res, next) => {
+  console.log("[Middleware] authenticateUser hit");
   const timestamp = new Date().toISOString();
   console.log(`\n${'='.repeat(80)}`);
   console.log(`[🔐 AUTH MIDDLEWARE] ${timestamp}`);

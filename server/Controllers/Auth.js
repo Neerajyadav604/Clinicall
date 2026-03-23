@@ -482,6 +482,9 @@ const Hospital = require("../models/Hospital");
 
 exports.doctorregistration = async (req, res) => {
   try {
+    console.log("[DoctorReg] Incoming body keys:", Object.keys(req.body));
+    console.log("[DoctorReg] Incoming files:", req.files ? Object.keys(req.files) : "none");
+    
     const user = req.user; 
     const {
       fullName,
@@ -646,12 +649,11 @@ exports.doctorregistration = async (req, res) => {
       data: registration,
     });
   } catch (err) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error(err);
-    }
+    console.error("[DoctorReg] FULL ERROR:", err);
     return res.status(500).json({
       success: false,
-      message: "Doctor registration failed",
+      message: err.message,
+      field: err.path || undefined,
     });
   }
 };
