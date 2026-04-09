@@ -108,14 +108,24 @@ const NotificationBell = () => {
               notifications.map((n) => {
                 const Icon = iconMap[n.type] || Bell;
                 return (
-                  <button
+                  <div
                     key={n._id}
+                    role="button"
+                    tabIndex={0}
                     className={`w-full flex gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 ${
                       n.isRead ? "bg-white" : "bg-blue-50"
                     }`}
                     onClick={() => {
                       if (!n.isRead) {
                         dispatch(markOneReadApi(n._id));
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        if (!n.isRead) {
+                          dispatch(markOneReadApi(n._id));
+                        }
                       }
                     }}
                   >
@@ -140,7 +150,7 @@ const NotificationBell = () => {
                     >
                       ✕
                     </button>
-                  </button>
+                  </div>
                 );
               })
             )}

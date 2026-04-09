@@ -48,14 +48,22 @@ export const checkChatAccess = async (appointmentId) => {
  */
 export const initiatePayment = async (appointmentId) => {
   try {
+    const payload = { appointmentId };
+    console.log("📤 [initiatePayment] Sending POST /createOrder with payload:", payload);
+    
     const response = await axiosInstance.post(
       `/createOrder`,
-      { appointmentId }
+      payload
     );
-    console.log("data :", response.status);
+    console.log("✅ [initiatePayment] Response received, status:", response.status, "data:", response.data);
     return response.data;
   } catch (error) {
-    console.error("Error initiating payment:", error);
+    console.error("❌ [initiatePayment] Error initiating payment:", {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      appointmentId: appointmentId
+    });
     throw error;
   }
 };
