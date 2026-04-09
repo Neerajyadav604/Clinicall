@@ -276,130 +276,181 @@ exports.login = async (req, res, next) => {
 
 
 
-
 exports.sendotp = async (req, res) => {
-  // ✅ DECLARE email OUTSIDE try block for catch access
+  const FUNC = "[sendotp]";
+  const reqId = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+  console.log(`${FUNC} ══════════════════════════════════════════`);
+  console.log(`${FUNC} Request started | reqId=${reqId}`);
+  console.log(`${FUNC} req.body =`, JSON.stringify(req.body));
+  console.log(`${FUNC} req.headers =`, JSON.stringify({
+    "content-type": req.headers["content-type"],
+    "user-agent":   req.headers["user-agent"],
+    "x-forwarded-for": req.headers["x-forwarded-for"],
+  }));
+
   let email;
-
   try {
-    console.log("[sendotp] Incoming request body:", req.body);
 
-    // ✅ Destructure and validate
+    // ── STEP 1: Destructure ────────────────────────────────────────────────
+    console.log(`${FUNC} [1/8] Destructuring request body…`);
     const { email: inputEmail } = req.body;
-    
-    // ✅ Assign to outer-scoped variable
     email = inputEmail;
+    console.log(`${FUNC} [1/8] email extracted = ${JSON.stringify(email)} | type = ${typeof email}`);
 
-    // ✅ SECURITY: Validate email format before any database queries
-    if (!email || typeof email !== 'string') {
+    // ── STEP 2: Presence check ─────────────────────────────────────────────
+    console.log(`${FUNC} [2/8] Checking email presence…`);
+    if (!email || typeof email !== "string") {
+      console.warn(`${FUNC} [2/8] FAIL – email missing or not a string | value = ${JSON.stringify(email)}`);
       return res.status(400).json({
         success: false,
         message: "Email is required and must be a string",
       });
     }
+    console.log(`${FUNC} [2/8] PASS – email is a non-empty string`);
 
-// ✅ Basic email format validation (RFC 5322 simplified)
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-if (!emailRegex.test(email.trim())) {
-  return res.status(400).json({
-    success: false,
-    message: "Invalid email format"
-  });
-}
+    // ── STEP 3: Format validation ──────────────────────────────────────────
+    console.log(`${FUNC} [3/8] Validating email format…`);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      console.warn(`${FUNC} [3/8] FAIL – invalid email format | email = ${email}`);
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email format",
+      });
+    }
+    console.log(`${FUNC} [3/8] PASS – email format valid`);
 
-const normalizedEmail = email.trim().toLowerCase();
+    // ── STEP 4: Normalize ──────────────────────────────────────────────────
+    const normalizedEmail = email.trim().toLowerCase();
+    console.log(`${FUNC} [4/8] Normalized email = "${normalizedEmail}"`);
 
-const checkuseremail = await User.findOne({email: normalizedEmail})  
+    // ── STEP 5: Duplicate-user check ───────────────────────────────────────
+    console.log(`${FUNC} [5/8] Querying DB: User.findOne({ email: "${normalizedEmail}" })…`);
+    let checkuseremail;
+    try {
+      checkuseremail = await User.findOne({ email: normalizedEmail });
+    } catch (dbErr) {
+      console.error(`${FUNC} [5/8] DB ERROR during User.findOne`, {
+        message: dbErr.message,
+        code: dbErr.code,
+        stack: dbErr.stack,
+      });
+      throw dbErr;
+    }
 
- if(checkuseremail){
-    return res.status(400).json({
-        success:false,
-        message:" email already registerd "
-    })
- }
+    if (checkuseremail) {
+      console.warn(`${FUNC} [5/8] FAIL – email already registered | userId = ${checkuseremail._id}`);
+      return res.status(400).json({
+        success: false,
+        message: "Email already registered",
+      });
+    }
+    console.log(`${FUNC} [5/8] PASS – email not yet registered`);
 
- // ✅ SECURITY: Fix race condition by generating OTP and checking for existence in atomic operation
- let otp;
- let otpRecord;
- let attempts = 0;
- const MAX_ATTEMPTS = 10;
- 
- do {
-   attempts++;
-   
-   otp = otpGenerator.generate(6,{
-     upperCaseAlphabets:false,
-     lowerCaseAlphabets:false,
-     specialChars:false
-   });
-   
-   // ✅ Use findOne to check if OTP already exists for this email
-   // In high-concurrency scenarios, consider adding a unique constraint on (email, otp)
-   otpRecord = await OTP.findOne({email: normalizedEmail, otp: otp});
-   
-   if (attempts >= MAX_ATTEMPTS && otpRecord) {
-     return res.status(500).json({
-       success: false,
-       message: "Failed to generate unique OTP. Please try again."
-     });
-   }
- } while (otpRecord);  // ✅ Re-check condition on each iteration
+    // ── STEP 6: Unique OTP generation loop ─────────────────────────────────
+    console.log(`${FUNC} [6/8] Starting OTP generation loop…`);
+    let otp;
+    let otpRecord;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 10;
 
- const payload = {
-    email: normalizedEmail,
-    otp:otp
- }
- if (process.env.NODE_ENV === 'development') {
-   console.log(payload);
- }
+    do {
+      attempts++;
+      otp = otpGenerator.generate(6, {
+        upperCaseAlphabets: false,
+        lowerCaseAlphabets: false,
+        specialChars: false,
+      });
+      console.log(`${FUNC} [6/8] Attempt ${attempts}/${MAX_ATTEMPTS} – generated OTP = ${otp}`);
 
- // ✅ Create OTP record. If unique constraint exists on (email, otp), handle E11000 error
- try {
-   const newotp = await OTP.create(payload);
-   console.log(`✅ OTP successfully created and email sent to ${normalizedEmail}`);
- } catch (dupErr) {
-   if (dupErr.code === 11000) {
-     // Duplicate key error - OTP already exists for this email
-     return res.status(400).json({
-       success: false,
-       message: "OTP already generated for this email. Please request a new one."
-     });
-   }
-   // Re-throw to be caught by outer catch block
-   throw dupErr;
- }
+      try {
+        otpRecord = await OTP.findOne({ email: normalizedEmail, otp });
+        console.log(`${FUNC} [6/8] Attempt ${attempts} – OTP collision check: ${otpRecord ? "COLLISION found" : "no collision"}`);
+      } catch (dbErr) {
+        console.error(`${FUNC} [6/8] DB ERROR during OTP.findOne on attempt ${attempts}`, {
+          message: dbErr.message,
+          code: dbErr.code,
+          stack: dbErr.stack,
+        });
+        throw dbErr;
+      }
 
- return res.status(200).json({
-    success:true,
-    message:"otp send successfully"
- })
+      if (attempts >= MAX_ATTEMPTS && otpRecord) {
+        console.error(`${FUNC} [6/8] FATAL – exhausted ${MAX_ATTEMPTS} OTP generation attempts without unique OTP`);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to generate unique OTP. Please try again.",
+        });
+      }
+    } while (otpRecord);
+
+    console.log(`${FUNC} [6/8] PASS – unique OTP found on attempt ${attempts}`);
+
+    // ── STEP 7: Build payload ──────────────────────────────────────────────
+    const payload = { email: normalizedEmail, otp };
+    console.log(`${FUNC} [7/8] OTP payload built | email = "${normalizedEmail}" | otp = ${
+      process.env.NODE_ENV === "development" ? otp : "***REDACTED***"
+    }`);
+
+    // ── STEP 8: Persist OTP record ─────────────────────────────────────────
+    console.log(`${FUNC} [8/8] Persisting OTP record via OTP.create()…`);
+    try {
+      const newOtp = await OTP.create(payload);
+      console.log(`${FUNC} [8/8] PASS – OTP record created | _id = ${newOtp._id} | email = "${normalizedEmail}"`);
+    } catch (dupErr) {
+      if (dupErr.code === 11000) {
+        console.warn(`${FUNC} [8/8] FAIL – duplicate key error (E11000) while creating OTP record`, {
+          message: dupErr.message,
+          keyValue: dupErr.keyValue,
+        });
+        return res.status(400).json({
+          success: false,
+          message: "OTP already generated for this email. Please request a new one.",
+        });
+      }
+      console.error(`${FUNC} [8/8] UNEXPECTED DB ERROR during OTP.create`, {
+        message: dupErr.message,
+        code: dupErr.code,
+        stack: dupErr.stack,
+      });
+      throw dupErr;
+    }
+
+    // ── SUCCESS ────────────────────────────────────────────────────────────
+    console.log(`${FUNC} ✅ SUCCESS | reqId=${reqId} | email="${normalizedEmail}" | attempts=${attempts}`);
+    console.log(`${FUNC} ══════════════════════════════════════════`);
+    return res.status(200).json({ success: true, message: "OTP sent successfully" });
 
   } catch (err) {
-    // ✅ NOW email IS ACCESSIBLE in catch block
-    console.error(`❌ SENDOTP ERROR for ${email || 'unknown email'}`, {
-      error: err.message,
+
+    // ── CATCH-ALL ──────────────────────────────────────────────────────────
+    console.error(`${FUNC} ❌ UNHANDLED ERROR | reqId=${reqId} | email="${email || "unknown"}"`, {
+      message: err.message,
       code: err.code,
+      name: err.name,
       stack: err.stack,
-      env_check: {
+      env: {
         has_mail_host: !!process.env.MAIL_HOST,
         has_mail_user: !!process.env.MAIL_USER,
         has_mail_pass: !!process.env.MAIL_PASS,
-        node_env: process.env.NODE_ENV,
+        node_env:      process.env.NODE_ENV,
       },
       timestamp: new Date().toISOString(),
     });
+    console.log(`${FUNC} ══════════════════════════════════════════`);
 
     return res.status(500).json({
       success: false,
       message: "OTP cannot be sent. Please check your email or try again later.",
-      ...(process.env.NODE_ENV === 'development' && {
+      ...(process.env.NODE_ENV === "development" && {
         debug: err.message,
         requestEmail: email,
+        reqId,
       }),
     });
   }
 };
-
 
 
 
