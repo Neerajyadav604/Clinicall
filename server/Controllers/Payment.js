@@ -32,35 +32,18 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    // ✅ DEFENSIVE LOGGING: Check appointment structure before extraction
-    console.log('[createOrder] 🔍 Full appointment doc:', JSON.stringify(appointment, null, 2));
-    console.log('[createOrder] appointment.doctorId type:', typeof appointment.doctorId);
-    console.log('[createOrder] appointment.doctorId value:', appointment.doctorId);
+    // ✅ Doctor is already populated from the .populate('doctorId') call above
+    const doctor = appointment.doctorId;
+    console.log('[createOrder] 🔍 Populated doctor doc:', {
+      _id: doctor._id,
+      fullName: doctor.fullName,
+      specialization: doctor.specialization,
+      consultationFee: doctor.consultationFee
+    });
 
-    // Extract doctorId - handle both populated object and ref-only cases
-    const doctorId = appointment.doctorId?._id || appointment.doctorId;
-    console.log('[createOrder] 🔎 doctorId being looked up:', doctorId);
-
-    // ✅ SECURITY: Fetch and verify the consultation fee from doctor profile
-    console.log(`[createOrder] 🔍 Querying DoctorProfile with filter: { doctorId: "${doctorId}" }`);
-    let doctorprofile = await doctorProfile.findOne({ doctorId: doctorId });
-    console.log('[createOrder] 🔍 DoctorProfile query result:', doctorprofile ? 'FOUND' : 'NOT FOUND', doctorprofile);
-
-    if (!doctorprofile) {
-      console.error('[createOrder] ❌ Doctor profile not found for doctorId:', doctorId);
-      console.error('[createOrder] 📊 Debugging info:', {
-        appointmentId: appointmentId,
-        doctorId: doctorId,
-        appointmentDoctorId: appointment.doctorId,
-        message: 'Check if DoctorProfile exists in database for this doctor'
-      });
-      return res.status(400).json({
-        success: false,
-        message: "Doctor profile not found. Cannot determine consultation fee."
-      });
-    }
-
-    let amount = doctorprofile.consultationFee;
+    // ✅ SECURITY: Fetch and verify the consultation fee directly from doctor document
+    let amount = doctor.consultationFee;
+    console.log('[createOrder] 💰 Consultation fee from doctor:', amount);
 
     // Verify amount is valid and matches contracted fee
     if (!amount || Number(amount) <= 0) {

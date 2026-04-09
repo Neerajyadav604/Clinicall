@@ -47,6 +47,11 @@ ref:"User"
     hospitalName: {
       type: String,
     },
+    consultationFee: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
     documents: {
       type: [String], // proof URLs
     },

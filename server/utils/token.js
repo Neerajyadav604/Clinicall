@@ -11,7 +11,7 @@ if (!JWT_SECRET || !REFRESH_TOKEN_SECRET) {
 }
 
 // Standard: backwards compatible with existing code
-exports.signAccessToken = (userId, role, fhirClaims = null) => {
+exports.signAccessToken = (userId, role, email = null, fhirClaims = null) => {
   // ✅ SECURITY: Validate role against allowlist to prevent arbitrary role injection
   const VALID_ROLES = ['user', 'admin', 'doctor', 'hospital_admin'];
   const normalizedRole = String(role).toLowerCase();
@@ -21,6 +21,11 @@ exports.signAccessToken = (userId, role, fhirClaims = null) => {
   }
   
   const payload = { id: userId, role: normalizedRole };
+  
+  // ✅ Include email in payload if provided (required by auth middleware)
+  if (email && typeof email === 'string') {
+    payload.email = email.toLowerCase();
+  }
   
   // Add FHIR-specific claims if provided
   if (fhirClaims) {

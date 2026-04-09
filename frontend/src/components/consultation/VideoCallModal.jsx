@@ -17,29 +17,53 @@ export default function VideoCallModal({ jitsiData, displayName = "User", onLeav
   const [status, setStatus] = useState("loading"); // loading | ready | error
 
   useEffect(() => {
-    if (!jitsiData?.token || !jitsiData?.fullRoom) return;
+    const FUNC = "[🎥 VideoCallModal:Jitsi]";
+    
+    if (!jitsiData?.token || !jitsiData?.fullRoom) {
+      console.log(`${FUNC} Missing data, skipping init`);
+      console.log(`${FUNC}   - Has Token: ${jitsiData?.token ? 'YES' : 'NO'}`);
+      console.log(`${FUNC}   - Has Room: ${jitsiData?.fullRoom ? 'YES' : 'NO'}`);
+      return;
+    }
+
+    console.log(`\n${FUNC} INITIALIZING JITSI`);
+    console.log(`${FUNC} ═══════════════════════════════════════════════════════════════════`);
+    console.log(`${FUNC} [1/5] DATA VALIDATION:`);
+    console.log(`${FUNC}   - Domain: ${jitsiData.domain}`);
+    console.log(`${FUNC}   - Room: ${jitsiData.fullRoom}`);
+    console.log(`${FUNC}   - Token Length: ${jitsiData.token?.length || 0}`);
+    console.log(`${FUNC}   - Display Name: ${displayName}`);
 
     const SCRIPT_ID = "jaas-external-api";
 
     const init = () => {
-      if (!containerRef.current || apiRef.current) return;
+      console.log(`${FUNC} [2/5] CONTAINER & API CHECK:`);
+      console.log(`${FUNC}   - Container Found: ${containerRef.current ? '✅ YES' : '❌ NO'}`);
+      console.log(`${FUNC}   - API Already Init: ${apiRef.current ? '⚠️ YES (skipping)' : '❌ NO'}`);
+      
+      if (!containerRef.current || apiRef.current) {
+        console.warn(`${FUNC}   - Skipping init (container missing or API already exists)`);
+        return;
+      }
 
       try {
+        console.log(`${FUNC} [3/5] JITSI INSTANCE CREATION:`);
+        console.log(`${FUNC}   - Calling: new window.JitsiMeetExternalAPI()`);
+        
         apiRef.current = new window.JitsiMeetExternalAPI(jitsiData.domain, {
-          roomName: jitsiData.fullRoom,   // "vpaas-magic-cookie-xxx/appointment-id"
-          jwt:      jitsiData.token,      // signed RS256 token from your server
+          roomName: jitsiData.fullRoom,
+          jwt:      jitsiData.token,
           parentNode: containerRef.current,
           width:  "100%",
           height: "100%",
           configOverwrite: {
-            prejoinPageEnabled:      false,  // skip lobby — doctor/patient go straight in
+            prejoinPageEnabled:      false,
             startWithAudioMuted:     false,
             startWithVideoMuted:     false,
             disableDeepLinking:      true,
-            disableInviteFunctions:  true,   // no "invite others" — room is appointment-locked
+            disableInviteFunctions:  true,
             enableNoisyMicDetection: true,
-            p2p: { enabled: true },          // direct P2P for 2-person consultations
-            // Medical use: disable recording by default (HIPAA consideration)
+            p2p: { enabled: true },
             fileRecordingsEnabled:   false,
             liveStreamingEnabled:    false,
           },
@@ -58,34 +82,87 @@ export default function VideoCallModal({ jitsiData, displayName = "User", onLeav
           },
         });
 
+        console.log(`${FUNC}   - ✅ Instance created`);
+
+        console.log(`${FUNC} [4/5] EVENT LISTENER REGISTRATION:`);
+        
         apiRef.current.addEventListeners({
-          videoConferenceJoined: () => setStatus("ready"),
-          readyToClose:          () => { setStatus("loading"); onLeave?.(); },
-          errorOccurred:         (err) => { setStatus("error"); onError?.(err); },
+          videoConferenceJoined: () => {
+            console.log(`${FUNC}   EVENT: videoConferenceJoined`);
+            console.log(`${FUNC}   - User successfully joined the call`);
+            setStatus("ready");
+          },
+          readyToClose: () => {
+            console.log(`${FUNC}   EVENT: readyToClose`);
+            console.log(`${FUNC}   - User initiated hangup`);
+            setStatus("loading");
+            onLeave?.();
+          },
+          errorOccurred: (err) => {
+            console.error(`${FUNC}   EVENT: errorOccurred`);
+            console.error(`${FUNC}   - Error Type: ${err?.constructor?.name || 'Unknown'}`);
+            console.error(`${FUNC}   - Error: ${err?.message || err?.error || JSON.stringify(err)}`);
+            setStatus("error");
+            onError?.(err);
+          },
         });
+        
+        console.log(`${FUNC}   - ✅ All listeners attached`);
+        console.log(`${FUNC} ${'═'.repeat(65)}\n`);
+
       } catch (err) {
-        console.error("[VideoCall] Jitsi init failed:", err);
+        console.error(`${FUNC} ❌ JITSI INIT FAILED:`);
+        console.error(`${FUNC}   - Error Type: ${err.constructor.name}`);
+        console.error(`${FUNC}   - Message: ${err.message}`);
+        console.error(`${FUNC}   - Stack: ${err.stack}`);
         setStatus("error");
         onError?.(err);
       }
     };
 
+    console.log(`${FUNC} [2/5] JITSI SDK CHECK:`);
     if (window.JitsiMeetExternalAPI) {
+      console.log(`${FUNC}   - ✅ JitsiMeetExternalAPI already loaded`);
       init();
     } else {
+      console.log(`${FUNC}   - ❌ JitsiMeetExternalAPI not in window`);
+      console.log(`${FUNC}   - Checking for existing script...`);
+      
       if (!document.getElementById(SCRIPT_ID)) {
-        const script    = document.createElement("script");
-        script.id       = SCRIPT_ID;
-        script.src      = "https://8x8.vc/external_api.js";
-        script.async    = true;
-        script.onload   = init;
-        script.onerror  = () => { setStatus("error"); onError?.(new Error("Jitsi SDK failed to load")); };
+        console.log(`${FUNC}   - No script found, creating new one`);
+        const script = document.createElement("script");
+        script.id = SCRIPT_ID;
+        script.src = "https://8x8.vc/external_api.js";
+        script.async = true;
+        
+        script.onload = () => {
+          console.log(`${FUNC}   - ✅ Script loaded successfully`);
+          console.log(`${FUNC}   - Jitsi SDK loaded: ${typeof window.JitsiMeetExternalAPI}`);
+          init();
+        };
+        
+        script.onerror = (err) => {
+          console.error(`${FUNC}   - ❌ Script load failed:`);
+          console.error(`${FUNC}   - Error: ${err?.message || 'Unknown error'}`);
+          setStatus("error");
+          onError?.(new Error("Failed to load Jitsi SDK from CDN"));
+        };
+        
+        console.log(`${FUNC}   - Appending script to document.head`);
         document.head.appendChild(script);
+      } else {
+        console.log(`${FUNC}   - Script already exists, waiting for load...`);
       }
     }
 
     return () => {
-      if (apiRef.current) { apiRef.current.dispose(); apiRef.current = null; }
+      console.log(`${FUNC} 🧹 CLEANUP:`);
+      if (apiRef.current) {
+        console.log(`${FUNC}   - Disposing Jitsi instance`);
+        apiRef.current.dispose();
+        apiRef.current = null;
+        console.log(`${FUNC}   - ✅ Instance disposed`);
+      }
     };
   }, [jitsiData?.token, jitsiData?.fullRoom]);
 

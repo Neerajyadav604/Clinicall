@@ -203,7 +203,7 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    const accessToken = signAccessToken(user._id, primaryRole);
+    const accessToken = signAccessToken(user._id, primaryRole, user.email);
     const refreshTokenDoc = await signRefreshToken(user._id);
 
     user.password = undefined;
@@ -512,7 +512,7 @@ exports.refresh = async (req, res, next) => {
     
     // Re-fetch user to get the current role from DB (not the old token payload)
     const User = require('../models/User');
-    const user = await User.findById(payload.id).select('role roles');
+    const user = await User.findById(payload.id).select('role roles email');
     
     if (!user) {
       console.warn(`User not found for refresh token: ${payload.id}`);
@@ -527,7 +527,7 @@ exports.refresh = async (req, res, next) => {
     const userRoles = Array.isArray(user?.roles) ? user.roles : [user?.role || 'user'];
     const primaryRole = rolesPriority.find(r => userRoles.includes(r)) || 'user';
     
-    const accessToken = signAccessToken(payload.id, primaryRole);
+    const accessToken = signAccessToken(payload.id, primaryRole, user.email);
     if (process.env.NODE_ENV === 'development') {
       console.log(`✅ Session refreshed for user: ${user._id}`);
     }
