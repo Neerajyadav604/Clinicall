@@ -155,7 +155,10 @@ app.use(session({
 // Each route that needs file upload uses multer directly
 // app.use(fileUpload({ useTempFiles: true, tempFileDir: os.tmpdir() }));
 
-app.use(express.json({ type: ['application/json', 'application/fhir+json'] }));
+// ✅ FIXED: Allow express.json to handle ALL JSON types (including multipart)
+// Removed the restrictive type array that blocked normal JSON requests
+app.use(express.json());
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 
 // ============================================

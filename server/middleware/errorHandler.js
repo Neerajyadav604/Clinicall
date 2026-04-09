@@ -71,6 +71,6 @@ const errorMiddleware = (err, req, res, next) => {
 };
 
 // Export all items
-exports.AppError = AppError;
-exports.toFhirOperationOutcome = toFhirOperationOutcome;
 module.exports = errorMiddleware;
+module.exports.AppError = AppError;
+module.exports.toFhirOperationOutcome = toFhirOperationOutcome;

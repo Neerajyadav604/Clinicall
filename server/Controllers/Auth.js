@@ -630,8 +630,89 @@ const Hospital = require("../models/Hospital");
 
 exports.doctorregistration = async (req, res) => {
   try {
-    console.log("[DoctorReg] Incoming body keys:", Object.keys(req.body));
-    console.log("[DoctorReg] Incoming files:", req.files ? Object.keys(req.files) : "none");
+    // ✅ DEFENSIVE: Log before any processing
+    console.log("[DoctorReg] ════════════════════════════════════════════════════");
+    console.log("[DoctorReg] Request headers:");
+    console.log("[DoctorReg]   - Content-Type:", req.headers["content-type"]);
+    console.log("[DoctorReg]   - Content-Length:", req.headers["content-length"]);
+    console.log("[DoctorReg] Raw req.body type:", typeof req.body, "| value:", req.body);
+    console.log("[DoctorReg] Raw req.files type:", typeof req.files, "| value:", req.files);
+    console.log("[DoctorReg] Raw req.file type:", typeof req.file, "| value:", req.file);
+
+    // ✅ NEW: Log actual files received from multer.any()
+    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+      console.log("[DoctorReg] Files received from multer.any():");
+      req.files.forEach((file, idx) => {
+        console.log(`[DoctorReg]   File ${idx + 1}:`);
+        console.log(`[DoctorReg]     - fieldname: "${file.fieldname}"`);
+        console.log(`[DoctorReg]     - originalname: "${file.originalname}"`);
+        console.log(`[DoctorReg]     - mimetype: "${file.mimetype}"`);
+        console.log(`[DoctorReg]     - size: ${file.size} bytes`);
+      });
+    }
+
+    // ✅ GUARD 1: Null/undefined check for req.body
+    if (req.body === null || req.body === undefined) {
+      console.error("[DoctorReg] ❌ GUARD 1 FAILED: req.body is null or undefined");
+      console.error("[DoctorReg] This usually means:");
+      console.error("[DoctorReg]   - Body parser middleware not applied");
+      console.error("[DoctorReg]   - Content-Type header mismatch");
+      console.error("[DoctorReg]   - Request body is larger than limit");
+      return res.status(400).json({
+        success: false,
+        message: "Invalid request body. Expected form fields in req.body.",
+      });
+    }
+
+    // ✅ GUARD 2: Type check for req.body (must be plain object, not array/null)
+    if (typeof req.body !== "object" || Array.isArray(req.body)) {
+      console.error("[DoctorReg] ❌ GUARD 2 FAILED: req.body is not a plain object", {
+        receivedType: typeof req.body,
+        isArray: Array.isArray(req.body),
+        value: req.body
+      });
+      return res.status(400).json({
+        success: false,
+        message: "Invalid request body. Expected form fields in req.body.",
+      });
+    }
+
+    // ✅ LOGGING: Safe Object.keys() calls with explicit null checks
+    console.log("[DoctorReg] ✅ req.body passed guards");
+    let bodyKeys;
+    try {
+      bodyKeys = Object.keys(req.body);
+      console.log("[DoctorReg] Incoming body keys:", bodyKeys);
+    } catch (keysErr) {
+      console.error("[DoctorReg] FAILED to get Object.keys(req.body)", {
+        error: keysErr.message,
+        req_body_type: typeof req.body,
+        req_body_is_null: req.body === null,
+        req_body_constructor: req.body?.constructor?.name
+      });
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error: Invalid request structure",
+      });
+    }
+
+    // ✅ GUARD 3: Safe files object inspection (defensive ternary)
+    let filesLog = "none";
+    if (req.files !== null && req.files !== undefined && typeof req.files === "object") {
+      try {
+        // Handle both array format (from .any()) and object format (from .fields())
+        if (Array.isArray(req.files)) {
+          filesLog = req.files.map(f => f.fieldname);
+        } else {
+          filesLog = Object.keys(req.files);
+        }
+      } catch (filesKeysErr) {
+        console.warn("[DoctorReg] Failed to get file field names", filesKeysErr.message);
+        filesLog = "(unreadable)";
+      }
+    }
+    console.log("[DoctorReg] Incoming files fieldnames:", filesLog);
+    console.log("[DoctorReg] ════════════════════════════════════════════════════");
     
     const user = req.user; 
     const {

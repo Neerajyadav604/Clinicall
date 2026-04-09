@@ -42,6 +42,67 @@ const upload = multer({
   },
 });
 
+// ✅ Multer config for doctor registration (accepts PDFs + docs, not just images)
+const docUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB for documents
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/png'
+    ];
+    
+    if (!file.mimetype || !allowedMimes.includes(file.mimetype)) {
+      cb(new Error("Only PDF, DOC, DOCX, JPG, and PNG files are allowed"));
+      return;
+    }
+    cb(null, true);
+  },
+});
+
+// ✅ Multer error handler middleware - catches "Unexpected field" errors
+const multerErrorHandler = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    console.error("[DoctorReg] Multer Error:", {
+      code: err.code,
+      message: err.message,
+      field: err.field,
+      limit: err.limit,
+    });
+    
+    if (err.code === 'UNEXPECTED_FILE') {
+      return res.status(400).json({
+        success: false,
+        message: `Unexpected file field: "${err.field}". Expected fields: documents, attachments, or other file fields.`,
+      });
+    }
+    
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: `File size exceeds limit (max 10MB)`,
+      });
+    }
+    
+    if (err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({
+        success: false,
+        message: `Too many files. Max 10 files allowed.`,
+      });
+    }
+    
+    return res.status(400).json({
+      success: false,
+      message: `File upload error: ${err.message}`,
+    });
+  }
+  
+  // Pass to next middleware if not a multer error
+  next(err);
+};
 
 router.post("/create-order", authenticateUser, createOrder);
 router.post("/verify-payment", authenticateUser, verifyPayment);
@@ -52,7 +113,15 @@ router.post("/sendotp", sendotp);
 router.post('/refresh', refresh);
 router.post('/logout', authenticateUser, logout);
 
-router.post("/doctorregistration", authenticateUser, doctorregistration);
+// ✅ FIXED: Changed from .fields() to .any() to accept any file field names
+// This prevents "Unexpected field" errors from frontend sending unexpected field names
+router.post(
+  "/doctorregistration", 
+  authenticateUser, 
+  docUpload.any(),
+  multerErrorHandler,
+  doctorregistration
+);
 router.get("/doctorregistration/status", authenticateUser, getDoctorRegistrationStatus);
 router.get("/doctor-registration/status", authenticateUser, getDoctorRegistrationStatus);
 
