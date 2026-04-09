@@ -32,12 +32,28 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    const doctorId = appointment.doctorId._id;
+    // ✅ DEFENSIVE LOGGING: Check appointment structure before extraction
+    console.log('[createOrder] 🔍 Full appointment doc:', JSON.stringify(appointment, null, 2));
+    console.log('[createOrder] appointment.doctorId type:', typeof appointment.doctorId);
+    console.log('[createOrder] appointment.doctorId value:', appointment.doctorId);
+
+    // Extract doctorId - handle both populated object and ref-only cases
+    const doctorId = appointment.doctorId?._id || appointment.doctorId;
+    console.log('[createOrder] 🔎 doctorId being looked up:', doctorId);
 
     // ✅ SECURITY: Fetch and verify the consultation fee from doctor profile
+    console.log(`[createOrder] 🔍 Querying DoctorProfile with filter: { doctorId: "${doctorId}" }`);
     let doctorprofile = await doctorProfile.findOne({ doctorId: doctorId });
+    console.log('[createOrder] 🔍 DoctorProfile query result:', doctorprofile ? 'FOUND' : 'NOT FOUND', doctorprofile);
 
     if (!doctorprofile) {
+      console.error('[createOrder] ❌ Doctor profile not found for doctorId:', doctorId);
+      console.error('[createOrder] 📊 Debugging info:', {
+        appointmentId: appointmentId,
+        doctorId: doctorId,
+        appointmentDoctorId: appointment.doctorId,
+        message: 'Check if DoctorProfile exists in database for this doctor'
+      });
       return res.status(400).json({
         success: false,
         message: "Doctor profile not found. Cannot determine consultation fee."
