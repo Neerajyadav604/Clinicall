@@ -254,7 +254,8 @@ const registerVideoCallSocket = (io, socket) => {
       socket.to(`chat_${appointmentId}`).emit("call:video:incoming", callPayload);
       console.log(`${FUNC}     ✅ Broadcast to chat room`);
 
-      // Scenario 2: Personal room notification to other participant
+      // Scenario 2: Personal notification room to other participant
+      // This ensures they get the call even if they haven't joined the chat room yet
       const doctorId = appointment.doctorId?._id?.toString() || appointment.doctorId?.toString();
       const patientId = appointment.userId?.toString();
       const otherPersonId = userId === patientId ? doctorId : patientId;
@@ -265,9 +266,11 @@ const registerVideoCallSocket = (io, socket) => {
       console.log(`${FUNC}   - Other participant: ${otherPersonId}`);
       
       if (otherPersonId) {
-        console.log(`${FUNC}   - Notifying other participant's personal room: ${otherPersonId}`);
-        socket.to(otherPersonId).emit("call:video:incoming", callPayload);
-        console.log(`${FUNC}     ✅ Broadcast to personal room`);
+        // ✅ FIX: Use personal notification room which socket joins on authentication
+        const otherPersonNotificationRoom = `notification_${otherPersonId}`;
+        console.log(`${FUNC}   - Notifying other participant's personal room: ${otherPersonNotificationRoom}`);
+        io.to(otherPersonNotificationRoom).emit("call:video:incoming", callPayload);
+        console.log(`${FUNC}     ✅ Broadcast to personal notification room`);
       } else {
         console.warn(`${FUNC} ⚠️  Could not determine other participant ID`);
       }

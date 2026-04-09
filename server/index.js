@@ -537,6 +537,12 @@ io.on("connection", (socket) => {
       
       console.log(`[🔐 Socket Auth:authenticate_appointment] ✅ ACCESS GRANTED: User is ${isDoctor ? 'doctor' : 'patient'}`);
 
+      // ✅ FIX: Join personal notification room so they receive video call events
+      // even if they haven't joined the chat room yet
+      const personalRoomId = `notification_${userId}`;
+      socket.join(personalRoomId);
+      console.log(`[🔐 Socket Auth] ✅ Joined personal notification room: ${personalRoomId}`);
+
       // Set appointment context on socket
       socket.appointmentId = appointmentId;
       socket.appointment = appointment;

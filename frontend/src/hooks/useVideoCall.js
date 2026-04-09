@@ -230,20 +230,27 @@ export function useVideoCall(appointmentId) {
     console.log(`${FUNC} Apartment ID: ${appointmentId}`);
     
     const onIncoming = (data) => {
-      console.log(`${FUNC} EVENT: "call:video:incoming"`);
-      console.log(`${FUNC}   - Caller: ${data.calledBy?.name}`);
+      console.log(`${FUNC} EVENT: "call:video:incoming" RECEIVED ✅`);
+      console.log(`${FUNC}   - Caller: ${data.calledBy?.name} (ID: ${data.calledBy?.id})`);
       console.log(`${FUNC}   - Caller Role: ${data.calledBy?.role}`);
       console.log(`${FUNC}   - Appointment: ${data.appointmentId}`);
-      console.log(`${FUNC}   - Current State: ${callState}`);
+      console.log(`${FUNC}   - Current Call State: ${callState}`);
+      console.log(`${FUNC}   - Expected Appointment ID: ${appointmentId}`);
+      console.log(`${FUNC}   - IDs Match: ${data.appointmentId === appointmentId}`);
       
-      // Only show in-chat banner if we're idle AND this call is for this appointment
-      if (callState === "idle" && data.appointmentId === appointmentId) {
-        console.log(`${FUNC}   - ✅ Showing incoming call banner`);
-        setIncomingCall(data);
-        setCallState("incoming");
-      } else {
-        console.log(`${FUNC}   - ℹ️  Ignoring (state=${callState}, appointmentMatch=${data.appointmentId === appointmentId})`);
+      if (callState !== "idle") {
+        console.log(`${FUNC}   - ℹ️  IGNORING: Not in idle state (current: ${callState})`);
+        return;
       }
+      
+      if (data.appointmentId !== appointmentId) {
+        console.log(`${FUNC}   - ℹ️  IGNORING: Wrong appointment (received ${data.appointmentId}, expected ${appointmentId})`);
+        return;
+      }
+      
+      console.log(`${FUNC}   - ✅ CONDITIONS MET - Showing incoming call banner`);
+      setIncomingCall(data);
+      setCallState("incoming");
     };
 
     const onEnded = ({ duration }) => {
