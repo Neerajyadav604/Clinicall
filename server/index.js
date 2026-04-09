@@ -436,14 +436,36 @@ io.use(async (socket, next) => {
         return next(new Error("Appointment not found"));
       }
 
+      // ✅ FIX: Handle both populated and unpopulated ObjectId references
       const userId = user._id.toString();
-      const isParticipant =
-        appointment.userId?.toString()  === userId ||
-        appointment.doctorId?.toString() === userId;
-
-      if (!isParticipant) {
+      
+      // Check patient: handle both raw ObjectId and populated object
+      const patientId = appointment.userId?._id
+        ? appointment.userId._id.toString()
+        : appointment.userId?.toString();
+      
+      // Check doctor: handle both raw ObjectId and populated object
+      const doctorId = appointment.doctorId?._id
+        ? appointment.doctorId._id.toString()
+        : appointment.doctorId?.toString();
+      
+      const isPatient = patientId === userId;
+      const isDoctor = doctorId === userId;
+      
+      // ✅ DEBUG: Log participant verification
+      console.log(`[🔐 Socket Auth] Participant verification:`);
+      console.log(`  - User ID: ${userId}`);
+      console.log(`  - Patient ID (from appt): ${patientId}`);
+      console.log(`  - Doctor ID (from appt): ${doctorId}`);
+      console.log(`  - Is Patient: ${isPatient}`);
+      console.log(`  - Is Doctor: ${isDoctor}`);
+      
+      if (!isPatient && !isDoctor) {
+        console.error(`[🔐 Socket Auth] ❌ ACCESS DENIED: User ${userId} not a participant`);
         return next(new Error("Access denied: you are not a participant in this appointment"));
       }
+      
+      console.log(`[🔐 Socket Auth] ✅ ACCESS GRANTED: User is ${isDoctor ? 'doctor' : 'patient'}`);
 
       socket.appointmentId = appointmentId;
       socket.appointment   = appointment;
@@ -484,14 +506,36 @@ io.on("connection", (socket) => {
         return socket.emit("error", "Appointment not found");
       }
 
+      // ✅ FIX: Handle both populated and unpopulated ObjectId references
       const userId = socket.user._id.toString();
-      const isParticipant =
-        appointment.userId?.toString()  === userId ||
-        appointment.doctorId?.toString() === userId;
-
-      if (!isParticipant) {
+      
+      // Check patient: handle both raw ObjectId and populated object
+      const patientId = appointment.userId?._id
+        ? appointment.userId._id.toString()
+        : appointment.userId?.toString();
+      
+      // Check doctor: handle both raw ObjectId and populated object  
+      const doctorId = appointment.doctorId?._id
+        ? appointment.doctorId._id.toString()
+        : appointment.doctorId?.toString();
+      
+      const isPatient = patientId === userId;
+      const isDoctor = doctorId === userId;
+      
+      // ✅ DEBUG: Log participant verification
+      console.log(`[🔐 Socket Auth:authenticate_appointment] Participant verification:`);
+      console.log(`  - User ID: ${userId}`);
+      console.log(`  - Patient ID (from appt): ${patientId}`);
+      console.log(`  - Doctor ID (from appt): ${doctorId}`);
+      console.log(`  - Is Patient: ${isPatient}`);
+      console.log(`  - Is Doctor: ${isDoctor}`);
+      
+      if (!isPatient && !isDoctor) {
+        console.error(`[🔐 Socket Auth:authenticate_appointment] ❌ ACCESS DENIED: User ${userId} not a participant`);
         return socket.emit("error", "Access denied: you are not a participant in this appointment");
       }
+      
+      console.log(`[🔐 Socket Auth:authenticate_appointment] ✅ ACCESS GRANTED: User is ${isDoctor ? 'doctor' : 'patient'}`);
 
       // Set appointment context on socket
       socket.appointmentId = appointmentId;
@@ -516,34 +560,71 @@ io.on("connection", (socket) => {
 
   // --- Chat room ---
   socket.on("join_chat", ({ appointmentId }) => {
+    const FUNC = "[💬 Socket join_chat]";
     try {
+      console.log(`${FUNC} JOIN CHAT INITIATED`);
+      console.log(`${FUNC} Appointment: ${appointmentId}`);
+      console.log(`${FUNC} Socket user: ${socket.user?._id} (${socket.user?.role})`);
+      console.log(`${FUNC} Socket appointment context: ${socket.appointmentId}`);
+      
+      // ✅ FIX: Verify participant access before allowing join
+      if (!appointmentId) {
+        console.error(`${FUNC} ❌ No appointmentId provided`);
+        return socket.emit("error", "Appointment ID is required");
+      }
+      
+      // Check if user is authorized for this appointment
+      if (socket.appointmentId && socket.appointmentId !== appointmentId) {
+        console.error(`${FUNC} ❌ Socket authenticated for different appointment`);
+        console.error(`${FUNC}   Socket appt: ${socket.appointmentId}, Requested appt: ${appointmentId}`);
+        return socket.emit("error", "Access denied: you are not authorized for this appointment");
+      }
+      
       const roomId = `chat_${appointmentId}`;
+      console.log(`${FUNC} Joining room: ${roomId}`);
       socket.join(roomId);
 
       if (!activeChatRooms.has(roomId)) {
+        console.log(`${FUNC} Creating new chat room in memory`);
         activeChatRooms.set(roomId, { messages: [], participants: [] });
       }
 
       const chatRoom = activeChatRooms.get(roomId);
       chatRoom.participants.push(socket.id);
+      console.log(`${FUNC} Participant added. Total: ${chatRoom.participants.length}`);
 
       socket.emit("chat_history", chatRoom.messages);
       socket.to(roomId).emit("user_joined", {
         message: "User joined the chat",
+        userId: socket.user._id,
+        userRole: socket.user.role,
         timestamp: new Date(),
       });
 
-      // ✅ SECURITY: Don't log appointment IDs or socket details
-      console.log("💬 Client joined chat room");
+      console.log(`${FUNC} ✅ Successfully joined chat room`);
     } catch (error) {
-      console.error("Error joining chat:", error);
+      console.error(`${FUNC} ❌ Error joining chat:`, error.message);
+      console.error(`${FUNC} Stack:`, error.stack);
       socket.emit("error", "Failed to join chat");
     }
   });
 
   // --- Send message ---
   socket.on("send_message", async ({ appointmentId, message, senderRole, fileUrl }) => {
+    const FUNC = "[💬 Socket send_message]";
     try {
+      console.log(`${FUNC} MESSAGE SEND INITIATED`);
+      console.log(`${FUNC} Appointment: ${appointmentId}`);
+      console.log(`${FUNC} Sender: ${socket.user?._id} (${senderRole})`);
+      console.log(`${FUNC} Message length: ${message?.length || 0} chars`);
+      console.log(`${FUNC} Has file: ${!!fileUrl}`);
+      
+      // ✅ Security: Verify participant is authorized
+      if (!appointmentId) {
+        console.error(`${FUNC} ❌ No appointmentId provided`);
+        return socket.emit("error", "Appointment ID is required");
+      }
+      
       const roomId = `chat_${appointmentId}`;
       const msgObj = {
         conversationId: appointmentId,
@@ -556,6 +637,7 @@ io.on("connection", (socket) => {
 
       const ChatMessage = require('./models/ChatMessage');
       const saved = await ChatMessage.create(msgObj);
+      console.log(`${FUNC} Message saved: ${saved._id}`);
 
       io.to(roomId).emit("receive_message", {
         id:         saved._id,
@@ -566,31 +648,49 @@ io.on("connection", (socket) => {
         timestamp:  saved.createdAt,
       });
 
-      // ✅ SECURITY: Don't log message content, appointmentId, or user IDs
-      console.log("📤 Message sent in chat");
+      console.log(`${FUNC} ✅ Message broadcast to room`);
     } catch (error) {
-      console.error("Error sending message:", error);
+      console.error(`${FUNC} ❌ Error sending message:`, error.message);
+      console.error(`${FUNC} Stack:`, error.stack);
       socket.emit("error", "Failed to send message");
     }
   });
 
   // --- Typing indicator ---
   socket.on('typing', ({ appointmentId }) => {
-    // ✅ SECURITY: Don't log appointmentId or user IDs
-    socket.to(`chat_${appointmentId}`).emit('typing', { from: socket.user._id });
+    try {
+      console.log(`[🔤 Socket typing] User typing in appointment`);
+      socket.to(`chat_${appointmentId}`).emit('typing', {
+        from: socket.user._id,
+        role: socket.user.role
+      });
+    } catch (err) {
+      console.error(`[🔤 Socket typing] Error:`, err.message);
+    }
   });
 
   // --- Read receipt ---
   socket.on('read', async ({ appointmentId }) => {
+    const FUNC = "[✓✓ Socket read]";
     try {
+      console.log(`${FUNC} READ RECEIPT`);
+      console.log(`${FUNC} Appointment: ${appointmentId}`);
+      console.log(`${FUNC} Reader: ${socket.user._id} (${socket.user.role})`);
+      
       const ChatMessage = require('./models/ChatMessage');
-      await ChatMessage.updateMany(
+      const result = await ChatMessage.updateMany(
         { conversationId: appointmentId, to: socket.user._id, read: false },
         { read: true }
       );
-      io.to(`chat_${appointmentId}`).emit('read', { appointmentId, reader: socket.user._id });
+      console.log(`${FUNC} ✅ Updated ${result.modifiedCount} messages`);
+      
+      io.to(`chat_${appointmentId}`).emit('read', {
+        appointmentId,
+        reader: socket.user._id,
+        role: socket.user.role
+      });
     } catch (err) {
-      console.error('Error updating read status', err);
+      console.error(`${FUNC} ❌ Error updating read status:`, err.message);
     }
   });
 
