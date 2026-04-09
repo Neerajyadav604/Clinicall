@@ -15,9 +15,10 @@ const jwt = require("jsonwebtoken");
  *
  * @param {object} user        - Mongoose User document (from socket.user or req.user)
  * @param {string} appointmentId - The appointment ObjectId (used as room name)
+ * @param {boolean} isDoctor   - Whether this user is the doctor (optional, overrides role check)
  * @returns {object} { token, roomName, domain, fullRoom }
  */
-const generateJitsiToken = (user, appointmentId) => {
+const generateJitsiToken = (user, appointmentId, isDoctor = false) => {
   const appId = process.env.JAAS_APP_ID;
   const kid   = process.env.JAAS_KID;
 
@@ -31,8 +32,10 @@ const generateJitsiToken = (user, appointmentId) => {
   // Room name: sanitized appointmentId (your rooms are already safe ObjectIds)
   const roomName = `appointment-${appointmentId}`;
 
-  // Determine moderator — doctors control the call
-  const isModerator = user.role === "doctor" || (user.roles && user.roles.includes("doctor"));
+  // ✅ FIX: Use isDoctor flag from caller if provided, otherwise fall back to role check
+  const isModerator = isDoctor !== false 
+    ? isDoctor 
+    : (user.role === "doctor" || (user.roles && user.roles.includes("doctor")));
 
   const now = Math.floor(Date.now() / 1000);
 

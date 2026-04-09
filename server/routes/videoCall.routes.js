@@ -63,7 +63,9 @@ router.get(
       }
 
       console.log(`${FUNC} [3/7] APPOINTMENT LOOKUP:`);
-      const appointment = await Appointment.findById(appointmentId);
+      // ✅ FIX: Populate doctorId to access Doctor.user (since doctorId references Doctor model)
+      const appointment = await Appointment.findById(appointmentId)
+        .populate('doctorId', 'user fullName email');
       console.log(`${FUNC}   - Found: ${appointment ? '✅ YES' : '❌ NO'}`);
       
       if (!appointment) {
@@ -79,15 +81,21 @@ router.get(
       console.log(`${FUNC}   - Payment Status: ${appointment.paymentStatus}`);
       console.log(`${FUNC}   - Consultation Status: ${appointment.consultationStatus}`);
       console.log(`${FUNC}   - Patient (userId): ${appointment.userId}`);
-      console.log(`${FUNC}   - Doctor (doctorId): ${appointment.doctorId}`);
+      console.log(`${FUNC}   - Doctor (doctorId): ${appointment.doctorId?._id} (user: ${appointment.doctorId?.user})`);
       console.log(`${FUNC}   - Appointment Date: ${appointment.appointmentDate}`);
       console.log(`${FUNC}   - Appointment Time: ${appointment.appointmentTime}`);
       console.log(`${FUNC}   - Created: ${appointment.createdAt}`);
 
       console.log(`${FUNC} [4/7] PARTICIPANT VERIFICATION:`);
       const userId = req.user._id.toString();
+      
+      // Check patient: compare with appointment userId
       const isPatient = appointment.userId?.toString() === userId;
-      const isDoctor = appointment.doctorId?.toString() === userId;
+      
+      // ✅ FIX: Check doctor by accessing Doctor.user field (since doctorId references Doctor model)
+      const isDoctor = appointment.doctorId?.user?._id?.toString() === userId 
+                    || appointment.doctorId?.user?.toString() === userId;
+      
       console.log(`${FUNC}   - Requester ID: ${userId}`);
       console.log(`${FUNC}   - Is Patient: ${isPatient ? '✅ YES' : '❌ NO'}`);
       console.log(`${FUNC}   - Is Doctor: ${isDoctor ? '✅ YES' : '❌ NO'}`);
@@ -97,7 +105,7 @@ router.get(
         return res.status(403).json({
           success: false,
           message: "Access denied. Only appointment participants can join video calls.",
-          debug: { userId, scheduledPatient: appointment.userId, scheduledDoctor: appointment.doctorId }
+          debug: { userId, scheduledPatient: appointment.userId, scheduledDoctorUser: appointment.doctorId?.user }
         });
       }
 
@@ -123,8 +131,11 @@ router.get(
 
       console.log(`${FUNC} [6/7] TOKEN GENERATION:`);
       try {
-        const jitsiData = generateJitsiToken(req.user, appointmentId);
+        // ✅ FIX: Pass req.user AND isDoctor flag so generator knows who this user is
+        const jitsiData = generateJitsiToken(req.user, appointmentId, isDoctor);
         console.log(`${FUNC}   - Token Generated: ✅ YES`);
+        console.log(`${FUNC}   - Identity: ${req.user._id} (${req.user.fullName || req.user.name})`);
+        console.log(`${FUNC}   - Moderator Flag: ${isDoctor ? '✅ TRUE (doctor)' : '❌ FALSE (patient)'}`);
         console.log(`${FUNC}   - Room Name: ${jitsiData.roomName}`);
         console.log(`${FUNC}   - Domain: ${jitsiData.domain}`);
         console.log(`${FUNC}   - Token Expiry: ${jitsiData.expiresAt ? new Date(jitsiData.expiresAt).toISOString() : 'N/A'}`);

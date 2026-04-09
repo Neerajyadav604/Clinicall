@@ -252,6 +252,23 @@ const Chat = () => {
       } catch (e) { /* ignore */ }
     }
   }, []);
+  
+  // FIX: When jitsiData arrives, extract the correct user name from the Jitsi token
+  // The Jitsi token is now generated with the correct logged-in user's data
+  useEffect(() => {
+    if (jitsiData?.token) {
+      try {
+        const jitsiPayload = JSON.parse(atob(jitsiData.token.split('.')[1]));
+        const userName = jitsiPayload.context?.user?.name || "User";
+        const isModerator = jitsiPayload.context?.user?.moderator || false;
+        console.log("[Chat] Using Jitsi token user - Name: " + userName + ", Moderator: " + isModerator);
+        setDisplayName(userName);
+        if (isModerator) setUserRole("doctor");
+      } catch (e) {
+        console.warn("[Chat] Could not parse Jitsi token:", e.message);
+      }
+    }
+  }, [jitsiData?.token]);
 
   // ── FILE UPLOAD (unchanged) ───────────────────────────────────────────────
   const handleFileUpload = async (file) => {
