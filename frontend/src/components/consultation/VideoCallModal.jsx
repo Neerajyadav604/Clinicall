@@ -255,24 +255,23 @@ export default function VideoCallModal({ jitsiData, displayName = "User", onLeav
     <div className="relative w-full h-full min-h-96 bg-gray-50 rounded-xl overflow-hidden border border-gray-200">
       <style>{`@keyframes vc-spin { to { transform: rotate(360deg); } }`}</style>
 
-      {/* Jitsi iframe container — ALWAYS VISIBLE so Jitsi can render/show errors */}
+      {/* Jitsi iframe container — ALWAYS in DOM so Jitsi can mount into it */}
       <div
         ref={containerRef}
         id="jitsi-container"
         style={{ 
           width: "100%", 
           height: "100%", 
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          position: "relative",
+          position: "absolute",
+          inset: 0,
+          visibility: status === "ready" ? "visible" : "hidden",
           backgroundColor: "#f3f4f6",
         }}
       />
       
-      {/* Loading overlay — semi-transparent, doesn't block Jitsi */}
+      {/* Loading overlay — only shown while status is "loading" */}
       {status === "loading" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-sm z-40 gap-3 pointer-events-none">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-sm z-40 gap-3">
           <div style={{
             width: 40, height: 40, borderRadius: "50%",
             border: "3px solid #dbeafe",
