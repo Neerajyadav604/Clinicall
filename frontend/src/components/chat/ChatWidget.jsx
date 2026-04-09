@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import AIChat from '../../pages/AIChat';
 import { HiOutlineChat, HiOutlineX } from 'react-icons/hi';
 
 const ChatWidget = () => {
   const [open, setOpen] = useState(false);
   const token = localStorage.getItem('token');
-  if (!token) return null; // only render for logged-in users
+  const location = useLocation();
+  
+  // Don't show on Chat page
+  const isChatPage = location.pathname.includes('/chat/');
+  
+  if (!token || isChatPage) return null;
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">

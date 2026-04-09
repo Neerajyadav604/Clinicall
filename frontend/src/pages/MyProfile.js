@@ -442,6 +442,20 @@ const MyProfile = () => {
       {/* ── Main Content ── */}
       <div className="flex-1 overflow-y-auto md:ml-16 lg:ml-[240px]">
         <div className="px-4 py-6 md:px-8 md:py-8" style={{ backgroundColor: "#f3f7fb" }}>
+          {/* Mobile Menu Toggle Button — only visible on mobile */}
+          <div className="mb-4 md:hidden flex justify-between items-center">
+            <h1 className="text-xl font-bold text-slate-900">Menu</h1>
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 rounded-lg border border-slate-300 hover:bg-slate-100 transition"
+              aria-label="Toggle navigation menu"
+            >
+              <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+
           <div className="mx-auto max-w-7xl space-y-6">
 
             {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ HEADER SECTION ━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
