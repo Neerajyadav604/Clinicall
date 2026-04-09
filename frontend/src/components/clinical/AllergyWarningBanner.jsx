@@ -42,7 +42,7 @@ const AllergyWarningBanner = ({ allergies = [] }) => {
       <div className="rounded-lg border border-red-300 bg-red-50 p-3 sm:p-4 md:p-5">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-start justify-between gap-3 sm:gap-4 text-left focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded p-1 sm:p-1.5 min-h-[44px] flex items-center"
+          className="w-full flex items-center justify-between gap-3 sm:gap-4 text-left focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 rounded p-1 sm:p-1.5 min-h-[44px]"
           aria-expanded={isExpanded}
           aria-label={`Allergy alert. ${isExpanded ? 'Collapse' : 'Expand'} allergy details`}
         >

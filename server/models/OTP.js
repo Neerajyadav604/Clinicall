@@ -34,14 +34,28 @@ async function sendVerificationEmail(email, otp) {
 }
 
 
+// ✅ CORRECT: Async pattern - NO next() parameter
 OTPSchema.pre("save", async function () {
-	console.log("New document saved to database");
+	console.log("[OTP Pre-Save] New document being saved");
 
-	
+	// ✅ Only send email for NEW documents
 	if (this.isNew) {
-		await sendVerificationEmail(this.email, this.otp);
+		try {
+			await sendVerificationEmail(this.email, this.otp);
+			console.log(`✅ OTP email sent successfully to ${this.email}`);
+			// ← No next() call - async hook returns promise automatically
+		} catch (error) {
+			console.error(`❌ CRITICAL: Failed to send OTP email to ${this.email}`, {
+				error: error.message,
+				code: error.code,
+				stack: error.stack,
+				timestamp: new Date().toISOString(),
+			});
+			// ← Don't call next(error) - throw instead
+			throw error; // Mongoose catches and rejects the promise
+		}
 	}
-	
+	// ← No else needed - hook completes successfully if not new
 });
 
 const OTP = mongoose.model("OTP", OTPSchema);

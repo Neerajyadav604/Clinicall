@@ -234,21 +234,69 @@ exports.login = async (req, res, next) => {
 
 
 
-exports.sendotp = async(req,res)=>{
-    try{
-      // ✅ SECURITY: Only log request body in development
-      if (process.env.NODE_ENV === 'development') {
-        console.log("otpreqbody :", req.body);
-      }
-const {email}=req.body
 
-// ✅ SECURITY: Validate email format before any database queries
-if (!email || typeof email !== 'string') {
-  return res.status(400).json({
-    success: false,
-    message: "Email is required and must be a string"
-  });
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+exports.sendotp = async (req, res) => {
+  // ✅ DECLARE email OUTSIDE try block for catch access
+  let email;
+
+  try {
+    console.log("[sendotp] Incoming request body:", req.body);
+
+    // ✅ Destructure and validate
+    const { email: inputEmail } = req.body;
+    
+    // ✅ Assign to outer-scoped variable
+    email = inputEmail;
+
+    // ✅ SECURITY: Validate email format before any database queries
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required and must be a string",
+      });
+    }
 
 // ✅ Basic email format validation (RFC 5322 simplified)
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -308,6 +356,7 @@ const checkuseremail = await User.findOne({email: normalizedEmail})
  // ✅ Create OTP record. If unique constraint exists on (email, otp), handle E11000 error
  try {
    const newotp = await OTP.create(payload);
+   console.log(`✅ OTP successfully created and email sent to ${normalizedEmail}`);
  } catch (dupErr) {
    if (dupErr.code === 11000) {
      // Duplicate key error - OTP already exists for this email
@@ -316,6 +365,7 @@ const checkuseremail = await User.findOne({email: normalizedEmail})
        message: "OTP already generated for this email. Please request a new one."
      });
    }
+   // Re-throw to be caught by outer catch block
    throw dupErr;
  }
 
@@ -324,14 +374,61 @@ const checkuseremail = await User.findOne({email: normalizedEmail})
     message:"otp send successfully"
  })
 
- }catch(err){
-console.log(err)
-return res.status(500).json({
-    success:false,
-    message:"Otp cannot be sent"
-})
-    }
-}
+  } catch (err) {
+    // ✅ NOW email IS ACCESSIBLE in catch block
+    console.error(`❌ SENDOTP ERROR for ${email || 'unknown email'}`, {
+      error: err.message,
+      code: err.code,
+      stack: err.stack,
+      env_check: {
+        has_mail_host: !!process.env.MAIL_HOST,
+        has_mail_user: !!process.env.MAIL_USER,
+        has_mail_pass: !!process.env.MAIL_PASS,
+        node_env: process.env.NODE_ENV,
+      },
+      timestamp: new Date().toISOString(),
+    });
+
+    return res.status(500).json({
+      success: false,
+      message: "OTP cannot be sent. Please check your email or try again later.",
+      ...(process.env.NODE_ENV === 'development' && {
+        debug: err.message,
+        requestEmail: email,
+      }),
+    });
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 exports.refresh = async (req, res, next) => {

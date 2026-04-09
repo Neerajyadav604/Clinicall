@@ -274,15 +274,27 @@ const Users = () => {
                 <div key={user._id || idx} className="au-table-row">
                   {/* Name + Avatar */}
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div style={{
-                      width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
-                      background: getAvatarColor(user.fullName),
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 13, fontWeight: 700,
-                      color: getAvatarText(user.fullName),
-                    }}>
-                      {getInitial(user.fullName)}
-                    </div>
+                    {user.image ? (
+                      <img 
+                        src={user.image} 
+                        alt={user.fullName}
+                        style={{
+                          width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+                          objectFit: "cover",
+                          border: "1px solid #e2e8f0",
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+                        background: getAvatarColor(user.fullName),
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 13, fontWeight: 700,
+                        color: getAvatarText(user.fullName),
+                      }}>
+                        {getInitial(user.fullName)}
+                      </div>
+                    )}
                     <span style={{ fontSize: 14, fontWeight: 600, color: "#0f172a" }}>
                       {user.fullName || "—"}
                     </span>

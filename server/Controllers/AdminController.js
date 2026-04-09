@@ -665,7 +665,7 @@ exports.getAllUsers = async (req, res) => {
     }
 
     const users = await User.find(query)
-      .select("fullName email contact role roles createdAt")
+      .select("fullName email contact role roles createdAt image")
       .sort({ createdAt: -1 });
 
     return res.status(200).json({
