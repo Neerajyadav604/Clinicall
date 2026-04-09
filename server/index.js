@@ -431,7 +431,7 @@ io.use(async (socket, next) => {
     socket.user = user;
 
     if (appointmentId) {
-      const appointment = await Appointment.findById(appointmentId);
+      const appointment = await Appointment.findById(appointmentId).populate('doctorId');
       if (!appointment) {
         return next(new Error("Appointment not found"));
       }
@@ -444,19 +444,19 @@ io.use(async (socket, next) => {
         ? appointment.userId._id.toString()
         : appointment.userId?.toString();
       
-      // Check doctor: handle both raw ObjectId and populated object
-      const doctorId = appointment.doctorId?._id
-        ? appointment.doctorId._id.toString()
-        : appointment.doctorId?.toString();
+      // Check doctor: since doctorId references Doctor model, get the user from Doctor.user
+      const doctorUserId = appointment.doctorId?.user?._id
+        ? appointment.doctorId.user._id.toString()
+        : appointment.doctorId?.user?.toString();
       
       const isPatient = patientId === userId;
-      const isDoctor = doctorId === userId;
+      const isDoctor = doctorUserId === userId;
       
       // ✅ DEBUG: Log participant verification
       console.log(`[🔐 Socket Auth] Participant verification:`);
       console.log(`  - User ID: ${userId}`);
       console.log(`  - Patient ID (from appt): ${patientId}`);
-      console.log(`  - Doctor ID (from appt): ${doctorId}`);
+      console.log(`  - Doctor User ID (from appt): ${doctorUserId}`);
       console.log(`  - Is Patient: ${isPatient}`);
       console.log(`  - Is Doctor: ${isDoctor}`);
       
@@ -501,7 +501,7 @@ io.on("connection", (socket) => {
         return socket.emit("error", "Appointment ID is required");
       }
 
-      const appointment = await Appointment.findById(appointmentId);
+      const appointment = await Appointment.findById(appointmentId).populate('doctorId');
       if (!appointment) {
         return socket.emit("error", "Appointment not found");
       }
@@ -514,19 +514,19 @@ io.on("connection", (socket) => {
         ? appointment.userId._id.toString()
         : appointment.userId?.toString();
       
-      // Check doctor: handle both raw ObjectId and populated object  
-      const doctorId = appointment.doctorId?._id
-        ? appointment.doctorId._id.toString()
-        : appointment.doctorId?.toString();
+      // Check doctor: since doctorId references Doctor model, get the user from Doctor.user
+      const doctorUserId = appointment.doctorId?.user?._id
+        ? appointment.doctorId.user._id.toString()
+        : appointment.doctorId?.user?.toString();
       
       const isPatient = patientId === userId;
-      const isDoctor = doctorId === userId;
+      const isDoctor = doctorUserId === userId;
       
       // ✅ DEBUG: Log participant verification
       console.log(`[🔐 Socket Auth:authenticate_appointment] Participant verification:`);
       console.log(`  - User ID: ${userId}`);
       console.log(`  - Patient ID (from appt): ${patientId}`);
-      console.log(`  - Doctor ID (from appt): ${doctorId}`);
+      console.log(`  - Doctor User ID (from appt): ${doctorUserId}`);
       console.log(`  - Is Patient: ${isPatient}`);
       console.log(`  - Is Doctor: ${isDoctor}`);
       
