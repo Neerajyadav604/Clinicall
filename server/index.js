@@ -401,6 +401,12 @@ io.use(async (socket, next) => {
   try {
     const token         = socket.handshake.auth.token;
     const appointmentId = socket.handshake.auth.appointmentId;
+    
+    console.log(`[🔐 Socket Auth Middleware]`);
+    console.log(`  - Socket ID: ${socket.id}`);
+    console.log(`  - Has Token: ${token ? '✅ YES' : '❌ NO'}`);
+    console.log(`  - Has AppointmentId: ${appointmentId ? '✅ YES' : '❌ NO'}`);
+    console.log(`  - AppointmentId Value: ${appointmentId || 'none'}`);
 
     if (!token || typeof token !== 'string') {
       return next(new Error("Authentication failed: token is required and must be a string"));
@@ -431,10 +437,19 @@ io.use(async (socket, next) => {
     socket.user = user;
 
     if (appointmentId) {
-      const appointment = await Appointment.findById(appointmentId).populate('doctorId');
+      // ✅ FIX: Use NESTED populate to get Doctor.user as full User object
+      const appointment = await Appointment.findById(appointmentId)
+        .populate({
+          path: 'doctorId',
+          populate: {
+            path: 'user',
+            select: '_id'
+          }
+        });
       if (!appointment) {
         return next(new Error("Appointment not found"));
       }
+      console.log(`[🔐 Socket Auth] Appointment loaded - doctorId.user type: ${typeof appointment.doctorId?.user}, value: ${appointment.doctorId?.user?._id}`);
 
       // ✅ FIX: Handle both populated and unpopulated ObjectId references
       const userId = user._id.toString();
@@ -496,17 +511,42 @@ io.on("connection", (socket) => {
 
   // --- Authenticate for specific appointment ---
   socket.on("authenticate_appointment", async ({ appointmentId }) => {
+    const FUNC = "[🔐 Socket Auth:authenticate_appointment]";
+    console.log(`\n${FUNC} ⏱️  EVENT RECEIVED`);
+    console.log(`${FUNC} ═══════════════════════════════════════════════════════════════════════════════════════`);
+    
     try {
+      console.log(`${FUNC} [1/6] REQUEST INFO:`);
+      console.log(`${FUNC}   - Socket ID: ${socket.id}`);
+      console.log(`${FUNC}   - User ID: ${socket.user?._id}`);
+      console.log(`${FUNC}   - User Name: ${socket.user?.fullName}`);
+      console.log(`${FUNC}   - Appointment ID: "${appointmentId}"`);
+      
       if (!appointmentId) {
+        console.error(`${FUNC} ❌ No appointment ID provided`);
         return socket.emit("error", "Appointment ID is required");
       }
 
-      const appointment = await Appointment.findById(appointmentId).populate('doctorId');
+      console.log(`${FUNC} [2/6] LOOKUP APPOINTMENT:`);
+      const appointment = await Appointment.findById(appointmentId)
+        .populate({
+          path: 'doctorId',
+          populate: {
+            path: 'user',
+            select: '_id'
+          }
+        });
+      
       if (!appointment) {
+        console.error(`${FUNC} ❌ Appointment not found: ${appointmentId}`);
         return socket.emit("error", "Appointment not found");
       }
+      console.log(`${FUNC}   - ✅ Found`);
+      console.log(`${FUNC}   - Patient: ${appointment.userId}`);
+      console.log(`${FUNC}   - Doctor: ${appointment.doctorId?._id}`);
 
       // ✅ FIX: Handle both populated and unpopulated ObjectId references
+      console.log(`${FUNC} [3/6] PARTICIPANT VERIFICATION:`);
       const userId = socket.user._id.toString();
       
       // Check patient: handle both raw ObjectId and populated object
@@ -522,35 +562,50 @@ io.on("connection", (socket) => {
       const isPatient = patientId === userId;
       const isDoctor = doctorUserId === userId;
       
-      // ✅ DEBUG: Log participant verification
-      console.log(`[🔐 Socket Auth:authenticate_appointment] Participant verification:`);
-      console.log(`  - User ID: ${userId}`);
-      console.log(`  - Patient ID (from appt): ${patientId}`);
-      console.log(`  - Doctor User ID (from appt): ${doctorUserId}`);
-      console.log(`  - Is Patient: ${isPatient}`);
-      console.log(`  - Is Doctor: ${isDoctor}`);
+      console.log(`${FUNC}   - User ID: ${userId}`);
+      console.log(`${FUNC}   - Patient ID (from appt): ${patientId}`);
+      console.log(`${FUNC}   - Doctor User ID (from appt): ${doctorUserId}`);
+      console.log(`${FUNC}   - Is Patient: ${isPatient ? '✅ YES' : '❌ NO'}`);
+      console.log(`${FUNC}   - Is Doctor: ${isDoctor ? '✅ YES' : '❌ NO'}`);
       
       if (!isPatient && !isDoctor) {
-        console.error(`[🔐 Socket Auth:authenticate_appointment] ❌ ACCESS DENIED: User ${userId} not a participant`);
+        console.error(`${FUNC} ❌ ACCESS DENIED: User ${userId} not a participant`);
         return socket.emit("error", "Access denied: you are not a participant in this appointment");
       }
-      
-      console.log(`[🔐 Socket Auth:authenticate_appointment] ✅ ACCESS GRANTED: User is ${isDoctor ? 'doctor' : 'patient'}`);
 
+      console.log(`${FUNC} [4/6] ROOM MANAGEMENT:`);      
       // ✅ FIX: Join personal notification room so they receive video call events
       // even if they haven't joined the chat room yet
       const personalRoomId = `notification_${userId}`;
       socket.join(personalRoomId);
-      console.log(`[🔐 Socket Auth] ✅ Joined personal notification room: ${personalRoomId}`);
+      console.log(`${FUNC}   - ✅ Joined personal notification room: ${personalRoomId}`);
+      
+      // Also join the chat room for this appointment
+      const chatRoomId = `chat_${appointmentId}`;
+      socket.join(chatRoomId);
+      console.log(`${FUNC}   - ✅ Joined chat room: ${chatRoomId}`);
 
+      console.log(`${FUNC} [5/6] SOCKET CONTEXT:`);
       // Set appointment context on socket
       socket.appointmentId = appointmentId;
       socket.appointment = appointment;
+      console.log(`${FUNC}   - ✅ Socket context updated`);
       
-      console.log("✅ Socket authenticated for appointment");
+      console.log(`${FUNC} [6/6] FINAL ROOMS status:`);
+      const roomsArray = Array.from(socket.rooms);
+      console.log(`${FUNC}   - Total rooms: ${roomsArray.length}`);
+      roomsArray.forEach(room => {
+        console.log(`${FUNC}     • ${room}`);
+      });
+      
       socket.emit("appointment_authenticated", { success: true });
+      console.log(`${FUNC} ✅ AUTHENTICATION COMPLETE`);
+      console.log(`${FUNC} ${'='.repeat(100)}\n`);
     } catch (error) {
-      console.error("Error authenticating appointment:", error);
+      console.error(`${FUNC} ❌ ERROR:`);
+      console.error(`${FUNC}   - Type: ${error.constructor.name}`);
+      console.error(`${FUNC}   - Message: ${error.message}`);
+      console.error(`${FUNC}   - Stack: ${error.stack}`);
       socket.emit("error", "Failed to authenticate appointment");
     }
   });
@@ -849,6 +904,25 @@ io.on("connection", (socket) => {
     if (process.env.NODE_ENV === 'development') {
       console.log('[CONSULTATION] Client left consultation room');
     }
+  });
+
+  // ✅ DEBUG ENDPOINT: Check which rooms user is in
+  socket.on("debug:rooms", () => {
+    const FUNC = "[🐛 DEBUG:rooms]";
+    const rooms = Array.from(socket.rooms);
+    console.log(`${FUNC} Socket User: ${socket.user?._id} (${socket.user?.fullName})`);
+    console.log(`${FUNC} Socket ID: ${socket.id}`);
+    console.log(`${FUNC} Rooms (total: ${rooms.length}):`);
+    rooms.forEach(room => {
+      console.log(`${FUNC}   - ${room}`);
+    });
+    
+    // Emit back to client for logging
+    socket.emit("debug:rooms:response", {
+      userId: socket.user?._id,
+      socketId: socket.id,
+      rooms: rooms
+    });
   });
 
   // --- Disconnect ---

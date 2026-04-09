@@ -226,11 +226,27 @@ export function useVideoCall(appointmentId) {
   // ── Socket listeners ─────────────────────────────────────────────────────
   useEffect(() => {
     const FUNC = "[🎥 useVideoCall:socketListeners]";
-    console.log(`${FUNC} Registering socket event listeners`);
-    console.log(`${FUNC} Apartment ID: ${appointmentId}`);
+    console.log(`\n${FUNC} ═══════════════════════════════════════════════════════════════════════════════════════`);
+    console.log(`${FUNC} REGISTERING SOCKET EVENT LISTENERS`);
+    console.log(`${FUNC}   - Apartment ID: ${appointmentId}`);
+    console.log(`${FUNC}   - Socket Connected: ${socket.connected ? '✅ YES' : '❌ NO'}`);
+    console.log(`${FUNC}   - Current Call State: ${callState}`);
+    
+    // ✅ DEBUG: Request current room status from server
+    console.log(`${FUNC} [DEBUG] Requesting current socket rooms from server...`);
+    socket.emit("debug:rooms");
+    socket.once("debug:rooms:response", (response) => {
+      console.log(`${FUNC} [DEBUG] SOCKET ROOMS ON SERVER:`);
+      console.log(`${FUNC}   - User: ${response.userId}`);
+      console.log(`${FUNC}   - Socket ID: ${response.socketId}`);
+      console.log(`${FUNC}   - Rooms (${response.rooms.length} total):`);
+      response.rooms.forEach(room => {
+        console.log(`${FUNC}     • ${room}`);
+      });
+    });
     
     const onIncoming = (data) => {
-      console.log(`${FUNC} EVENT: "call:video:incoming" RECEIVED ✅`);
+      console.log(`\n${FUNC} EVENT: "call:video:incoming" RECEIVED ✅`);
       console.log(`${FUNC}   - Caller: ${data.calledBy?.name} (ID: ${data.calledBy?.id})`);
       console.log(`${FUNC}   - Caller Role: ${data.calledBy?.role}`);
       console.log(`${FUNC}   - Appointment: ${data.appointmentId}`);
@@ -292,10 +308,11 @@ export function useVideoCall(appointmentId) {
     socket.on("call:video:declined",          onDeclined);
     socket.on("call:video:participant_joined",onParticipantJoined);
     socket.on("call:video:participant_left",  onParticipantLeft);
-    console.log(`${FUNC} ✅ All listeners registered\n`);
+    console.log(`${FUNC} ✅ All listeners registered`);
+    console.log(`${FUNC} ${'='.repeat(100)}\n`);
 
     return () => {
-      console.log(`${FUNC} 🧹 Cleaning up listeners`);
+      console.log(`${FUNC} 🧹 Cleaning up listeners for appointmentId: ${appointmentId}`);
       socket.off("call:video:incoming",          onIncoming);
       socket.off("call:video:ended",             onEnded);
       socket.off("call:video:declined",          onDeclined);
@@ -303,10 +320,34 @@ export function useVideoCall(appointmentId) {
       socket.off("call:video:participant_left",  onParticipantLeft);
       console.log(`${FUNC} ✅ All listeners removed\n`);
     };
-  }, [callState, stopTimer]);
+  }, [appointmentId, callState, stopTimer]);
 
   // ── Cleanup on unmount ────────────────────────────────────────────────────
   useEffect(() => () => stopTimer(), [stopTimer]);
+
+  // ── DEBUG HELPER: Expose diagnostic functions to window ────────────────────
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.debugVideoCall = {
+        checkRooms: () => {
+          console.log("[🐛 DEBUG] Requesting room info...");
+          socket.emit("debug:rooms");
+        },
+        getState: () => ({
+          appointmentId,
+          callState,
+          hasIncomingCall: !!incomingCall,
+          socketConnected: socket.connected,
+          jitsiDataReady: !!jitsiData,
+        }),
+        logState: function() {
+          console.log("[🐛 DEBUG] Current Video Call State:");
+          console.table(this.getState());
+        }
+      };
+      console.log("[🎥 VIDEO CALL] Debug helpers available. Use: window.debugVideoCall.checkRooms() or window.debugVideoCall.logState()");
+    }
+  }, [appointmentId, callState, incomingCall, jitsiData, socket]);
 
   return {
     callState,       // "idle"|"calling"|"in-call"|"incoming"|"ended"|"declined"

@@ -63,10 +63,19 @@ router.get(
       }
 
       console.log(`${FUNC} [3/7] APPOINTMENT LOOKUP:`);
-      // ✅ FIX: Populate doctorId to access Doctor.user (since doctorId references Doctor model)
+      // ✅ FIX: Use NESTED populate to get Doctor.user as full User object
       const appointment = await Appointment.findById(appointmentId)
-        .populate('doctorId', 'user fullName email');
+        .populate({
+          path: 'doctorId',
+          populate: {
+            path: 'user',
+            select: '_id fullName email'
+          }
+        });
       console.log(`${FUNC}   - Found: ${appointment ? '✅ YES' : '❌ NO'}`);
+      if (appointment?.doctorId) {
+        console.log(`${FUNC}   - Doctor populate check: doctorId.user type = ${typeof appointment.doctorId.user}, _id=${appointment.doctorId.user?._id}`);
+      }
       
       if (!appointment) {
         console.error(`${FUNC} ❌ Appointment not found for ID: ${appointmentId}`);
@@ -194,7 +203,16 @@ const registerVideoCallSocket = (io, socket) => {
       console.log(`${FUNC}   - Appointment ID: "${appointmentId}"`);
       
       console.log(`${FUNC} [2/6] APPOINTMENT LOOKUP:`);
-      const appointment = await Appointment.findById(appointmentId).populate('doctorId', 'fullName image');
+      // ✅ FIX: Use NESTED populate to get Doctor.user as full User object
+      const appointment = await Appointment.findById(appointmentId)
+        .populate({
+          path: 'doctorId',
+          select: 'fullName image user',
+          populate: {
+            path: 'user',
+            select: '_id'
+          }
+        });
       
       if (!appointment) {
         console.error(`${FUNC} ❌ Appointment not found: ${appointmentId}`);
@@ -211,7 +229,9 @@ const registerVideoCallSocket = (io, socket) => {
       console.log(`${FUNC} [3/6] PARTICIPANT VERIFICATION:`);
       const userId = socket.user._id.toString();
       const isPatient = appointment.userId?.toString() === userId;
-      const isDoctor = appointment.doctorId?._id?.toString() === userId;
+      // ✅ FIX: Check doctor by accessing Doctor.user (since doctorId references Doctor model)
+      const isDoctor = appointment.doctorId?.user?._id?.toString() === userId 
+                    || appointment.doctorId?.user?.toString() === userId;
       
       console.log(`${FUNC}   - Initiator is Patient: ${isPatient ? '✅ YES' : '❌ NO'}`);
       console.log(`${FUNC}   - Initiator is Doctor: ${isDoctor ? '✅ YES' : '❌ NO'}`);

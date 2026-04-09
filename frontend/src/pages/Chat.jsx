@@ -346,7 +346,8 @@ const Chat = () => {
         if (socket.connected)       { attemptAuth(); }
         else if (socket.connecting) { connectHandler = () => { attemptAuth(); socket.off('connect', connectHandler); }; socket.once('connect', connectHandler); }
         else {
-          socket.auth = { token: localStorage.getItem("token") };
+          // ✅ FIX: Pass appointmentId in socket.auth so backend can verify doctor/patient at connection time
+          socket.auth = { token: localStorage.getItem("token"), appointmentId };
           socket.connect();
           connectHandler = () => { attemptAuth(); socket.off('connect', connectHandler); };
           socket.once('connect', connectHandler);
