@@ -102,13 +102,13 @@ const DoctorAppointments = () => {
 
   // Generate a short patient display ID from mongo _id
   const shortId = (apt) => {
-    if (apt.patientId?.shortId) return `#${apt.patientId.shortId}`;
+    if (apt.userId?.shortId) return `#${apt.userId.shortId}`;
     if (apt._id) return `#${apt._id.slice(-4).toUpperCase()}`;
     return "#—";
   };
 
   const patientName = (apt) =>
-    apt.patientId?.fullName || apt.patientName || null;
+    apt.userId?.fullName || apt.patientId?.fullName || apt.patientName || null;
 
   return (
     <DoctorLayout>
