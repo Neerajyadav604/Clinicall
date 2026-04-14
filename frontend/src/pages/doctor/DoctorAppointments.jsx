@@ -351,12 +351,12 @@ const DoctorAppointments = () => {
                     )}
                   </div>
                   <div>
-                    <p className="da-mono" style={{ fontWeight: 600, fontSize: 13, color: "#0f1e2e" }}>
+                    <p style={{ fontWeight: 600, fontSize: 13, color: "#0f1e2e" }}>
+                      {patientName(apt) || "Unknown Patient"}
+                    </p>
+                    <p className="da-mono" style={{ fontSize: 11, color: "#64748b", marginTop: 1 }}>
                       {shortId(apt)}
                     </p>
-                    {patientName(apt) && (
-                      <p style={{ fontSize: 11, color: "#64748b", marginTop: 1 }}>{patientName(apt)}</p>
-                    )}
                     {isLocked && (
                       <p style={{ fontSize: 10, color: "#dc2626", marginTop: 1, fontWeight: 600 }}>
                         Session expired or restricted
