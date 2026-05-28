@@ -249,26 +249,11 @@ export default function VideoCallModal({ jitsiData, displayName = "User", onLeav
           height: "100%", 
           position: "absolute",
           inset: 0,
-          visibility: status === "ready" ? "visible" : "hidden",
           backgroundColor: "#f3f4f6",
         }}
       />
       
-      {/* Loading overlay — only shown while status is "loading" */}
-      {status === "loading" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/20 backdrop-blur-sm z-40 gap-3">
-          <div style={{
-            width: 40, height: 40, borderRadius: "50%",
-            border: "3px solid #dbeafe",
-            borderTopColor: "#2563eb",
-            animation: "vc-spin 0.8s linear infinite",
-          }} />
-          <p className="text-sm text-gray-600 font-medium">Connecting to secure call…</p>
-          <p className="text-xs text-gray-500">Starting Jitsi Meet</p>
-        </div>
-      )}
-
-      {/* Error overlay */}
+      {/* Loading overlay — only shown if there was an error */}
       {status === "error" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm z-40 gap-3">
           <div className="bg-white border border-gray-300 rounded-xl p-8 flex flex-col items-center gap-3 shadow-lg">
