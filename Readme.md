@@ -288,7 +288,8 @@ REACT_APP_CLOUDINARY_PRESET=your_upload_preset
 
 ### Landing Page
 <!-- ![Home Page](screenshots/home.png) -->
-<img width="1443" height="132" alt="image" src="https://github.com/user-attachments/assets/319dabf1-8caa-42d6-8c4a-2438ce304cc5" />
+<img width="1895" height="1000" alt="Screenshot 2026-05-28 225047" src="https://github.com/user-attachments/assets/ac25e872-4ea4-4c23-b88e-7ebc76c55e87" />
+
 
 
 ### Patient Dashboard — Appointment Booking
