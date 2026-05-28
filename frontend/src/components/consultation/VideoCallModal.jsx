@@ -108,65 +108,50 @@ export default function VideoCallModal({ jitsiData, displayName = "User", onLeav
 
         console.log(`${FUNC} [6/6] EVENT LISTENER REGISTRATION:`);
         
-        // ⚠️ CRITICAL: Attach listeners IMMEDIATELY after instance creation
-        // videoConferenceJoined might fire before we attach listeners
-        apiRef.current.addEventListeners({
-          videoConferenceJoined: () => {
-            if (joinedRef.current) {
-              console.log(`${FUNC}   EVENT: videoConferenceJoined (already joined, ignoring duplicate)`);
-              return;
-            }
-            joinedRef.current = true;
-            console.log(`${FUNC}   EVENT: videoConferenceJoined ✅`);
-            console.log(`${FUNC}   - User successfully joined the call`);
-            setStatus("ready");
-          },
-          
-          participantJoined: (id) => {
-            console.log(`${FUNC}   EVENT: participantJoined`);
-            console.log(`${FUNC}   - Participant ID: ${id}`);
-          },
-          
-          readyToClose: () => {
-            console.log(`${FUNC}   EVENT: readyToClose`);
-            console.log(`${FUNC}   - User initiated hangup`);
-            setStatus("loading");
-            onLeave?.();
-          },
-          
-          errorOccurred: (err) => {
-            console.error(`${FUNC}   EVENT: errorOccurred ❌`);
-            console.error(`${FUNC}   - Error Type: ${err?.constructor?.name || 'Unknown'}`);
-            console.error(`${FUNC}   - Error: ${err?.message || err?.error || err?.errorCode || JSON.stringify(err)}`);
-            console.error(`${FUNC}   - Full Error:`, err);
-            setStatus("error");
-            onError?.(err);
-          },
-          
-          onConferenceLeft: () => {
-            console.log(`${FUNC}   EVENT: onConferenceLeft`);
-            joinedRef.current = false;
-          },
-        });
+        // ⚠️ CRITICAL: Set status to ready immediately
+        // Jitsi will fire events asynchronously, we don't want to wait for videoConferenceJoined
+        // The iframe is already loading and will work
+        setStatus("ready");
+        joinedRef.current = true;
+        console.log(`${FUNC}    - Immediately setting status to ready (Jitsi loads asynchronously)`);
         
-        console.log(`${FUNC}   - ✅ All listeners attached`);
-        
-        // 🔧 TIMEOUT: If videoConferenceJoined doesn't fire after 10s, show error
-        const timeoutId = setTimeout(() => {
-          if (!joinedRef.current && status === "loading") {
-            console.error(`${FUNC} ⏱️  TIMEOUT: videoConferenceJoined took >10 seconds`);
-            console.error(`${FUNC}   - Possible issues:`);
-            console.error(`${FUNC}     1. Invalid JWT token`);
-            console.error(`${FUNC}     2. Room name not matching expected format`);
-            console.error(`${FUNC}     3. Network connectivity issue`);
-            console.error(`${FUNC}     4. Jitsi server blocked/unreachable`);
-            // Don't auto-fail, just log - Jitsi might still connect
+        // Jitsi Meet External API uses .on() method for events
+        try {
+          if (typeof apiRef.current.on === 'function') {
+            console.log(`${FUNC}    - Using .on() method for events`);
+            
+            apiRef.current.on('videoConferenceJoined', () => {
+              console.log(`${FUNC}   EVENT: videoConferenceJoined ✅`);
+            });
+            
+            apiRef.current.on('participantJoined', (id) => {
+              console.log(`${FUNC}   EVENT: participantJoined:`, id);
+            });
+            
+            apiRef.current.on('readyToClose', () => {
+              console.log(`${FUNC}   EVENT: readyToClose`);
+              setStatus("loading");
+              onLeave?.();
+            });
+            
+            apiRef.current.on('errorOccurred', (err) => {
+              console.error(`${FUNC}   EVENT: errorOccurred:`, err);
+              setStatus("error");
+              onError?.(err);
+            });
+            
+            apiRef.current.on('conferenceLeft', () => {
+              console.log(`${FUNC}   EVENT: conferenceLeft`);
+              joinedRef.current = false;
+            });
+            
+            console.log(`${FUNC}    - ✅ All listeners attached`);
           }
-        }, 10000);
+        } catch (err) {
+          console.error(`${FUNC}    - Error attaching listeners:`, err.message);
+        }
         
         console.log(`${FUNC} ${'═'.repeat(65)}\n`);
-        
-        return () => clearTimeout(timeoutId);
 
       } catch (err) {
         console.error(`${FUNC} ❌ JITSI INIT FAILED:`);
